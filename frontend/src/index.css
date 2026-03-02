@@ -1,0 +1,45 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap");
+
+:root {
+  --bg-ink: #061524;
+  --bg-ink-soft: #0d2437;
+  --bg-surface: #f4efe5;
+  --bg-surface-alt: #fffaf2;
+  --line-dark: #17334a;
+  --line-soft: #d7c9ad;
+  --text-strong: #102337;
+  --text-muted: #3f5568;
+  --brand: #1e6d90;
+  --brand-2: #d88b4a;
+  --warn: #d97534;
+  --ok: #2f8a5f;
+
+  font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  line-height: 1.4;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  min-width: 320px;
+  background:
+    radial-gradient(circle at 12% 12%, #ffd89f22 0, transparent 32%),
+    radial-gradient(circle at 82% 88%, #76c3e022 0, transparent 36%),
+    linear-gradient(140deg, var(--bg-ink), #0f2a3f 52%, #20384a 100%);
+  color: var(--text-strong);
+}

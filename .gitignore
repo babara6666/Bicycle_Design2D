@@ -1,0 +1,74 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# ── Environment / secrets (NEVER commit these) ────────────────────────────────
+.env
+.env.*
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+
+*.pem
+*.key
+secrets.json
+credentials.json
+
+# ── Database files ─────────────────────────────────────────────────────────────
+*.db
+*.sqlite3
+*.sqlite
+backend/data/bicycle2d.db
+
+# ── Generated / large data files (re-created by scripts) ──────────────────────
+backend/data/dxf_source/
+backend/data/svg/
+backend/data/attach_points_all.json
+
+# ── DWG source drawings (proprietary, large) ──────────────────────────────────
+DWG/
+
+# ── Output artefacts ──────────────────────────────────────────────────────────
+Output/dxf/
+Output/dwg/
+Output/pdf/
+
+# ── Node / frontend ───────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# ── OS / editor clutter ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# ── Temporary / debug scripts (root-level tmp_*.py already deleted) ───────────
+tmp_*.py
+debug_*.py
+nul
+
+# ── Antigravity / AI agent workspace ─────────────────────────────────────────
+.agents/
+.gemini/
+
+# ── Internal design documents (not for public repo) ──────────────────────────
+\# IBDS*.md
+STARTUP.md
