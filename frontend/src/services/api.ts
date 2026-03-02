@@ -36,6 +36,13 @@ export async function fetchComponents(vehicle: Vehicle): Promise<ComponentListIt
   return response.data;
 }
 
+export async function fetchAllComponents(category?: string): Promise<ComponentListItem[]> {
+  const response = await client.get<ComponentListItem[]>("/api/components", {
+    params: category ? { category } : {},
+  });
+  return response.data;
+}
+
 export async function fetchComponentDetail(id: number): Promise<ComponentDetail> {
   const response = await client.get<ComponentDetail>(`/api/components/${id}`);
   return response.data;

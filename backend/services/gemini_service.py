@@ -42,7 +42,12 @@ BRAND_PARTS_SYSTEM = (
 class GeminiImageService:
     def __init__(self, api_key: str) -> None:
         self.client = genai.Client(api_key=api_key)
-        self.model = "gemini-2.0-flash-preview-image-generation"
+        # Image-output capable models (generateContent with Image modality):
+        #   - "gemini-2.0-flash-exp"            (experimental, 2.0, free tier OK)
+        #   - "gemini-2.0-flash-exp-image-generation" (alias on some SDK versions)
+        #   - "gemini-2.5-flash-image"          (2025-08 release, may need paid tier)
+        # Use gemini-2.0-flash-exp as it is the most broadly available:
+        self.model = "gemini-2.0-flash-exp"
 
     # ── Internal helpers ───────────────────────────────────────────────────────
 

@@ -29,6 +29,8 @@ class ComponentDetail(ComponentBase):
     preview_svg: str | None = None
     attach_primary: Point | None = None
     attach_block_name: str | None = None
+    attach_secondary: Point | None = None
+    attach_secondary_block_name: str | None = None
     pa_default: Point | None = None
     pb_default: Point | None = None
     physical_length_mm: float | None = None

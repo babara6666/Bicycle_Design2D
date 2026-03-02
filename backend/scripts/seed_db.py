@@ -100,6 +100,8 @@ def upsert_component(
             "preview_svg": preview_svg,
             "attach_primary": item.get("attach_primary"),
             "attach_block_name": item.get("attach_block_name"),
+            "attach_secondary": item.get("attach_secondary"),
+            "attach_secondary_block_name": item.get("attach_secondary_block_name"),
             "pa_default": item.get("pa_default"),
             "pb_default": item.get("pb_default"),
             "physical_length_mm": None,

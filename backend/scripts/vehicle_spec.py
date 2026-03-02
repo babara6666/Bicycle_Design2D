@@ -3,6 +3,7 @@ from __future__ import annotations
 SKELETON_ATTACH_BLOCKS = {
     "HT_Attach",
     "ST_Attach",
+    "ST_Attach2",  # second seat-tube attach → defines movement axis
     "Motor_Attach",
     "SS_Attach",
     "CS_Attach",
@@ -23,7 +24,17 @@ CATEGORY_PRIMARY_BLOCK = {
     "fork_end": "END_Attach",
 }
 
-ALL_KNOWN_BLOCKS = set(CATEGORY_PRIMARY_BLOCK.values()) | HEAD_TUBE_EXTRA_BLOCKS
+# For seat_tube: ST_Attach2 defines the second point of the movement axis
+CATEGORY_SECONDARY_BLOCK = {
+    "seat_tube": "ST_Attach2",
+}
+
+ALL_KNOWN_BLOCKS = (
+    set(CATEGORY_PRIMARY_BLOCK.values())
+    | HEAD_TUBE_EXTRA_BLOCKS
+    | set(CATEGORY_SECONDARY_BLOCK.values())
+    | SKELETON_ATTACH_BLOCKS  # includes ST_Attach2
+)
 
 VEHICLES = {
     "ASBGF-500": {

@@ -92,3 +92,26 @@ export function applyAxisConstraint(
   }
   return { x: newPos.x, y: fixedValue };
 }
+
+/**
+ * Project newPos onto the infinite line through `origin` in `direction`.
+ * Used for ST_Attach2: seat tube can only slide along ST_Attach→ST_Attach2 axis.
+ */
+export function applyVectorConstraint(
+  newPos: Point,
+  origin: Point,
+  direction: Point,
+): Point {
+  const dx = direction.x - origin.x;
+  const dy = direction.y - origin.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq < 1e-10) {
+    return origin; // degenerate: same point, return origin
+  }
+  // t = dot(newPos - origin, dir) / |dir|^2
+  const t = ((newPos.x - origin.x) * dx + (newPos.y - origin.y) * dy) / lenSq;
+  return {
+    x: Number((origin.x + t * dx).toFixed(4)),
+    y: Number((origin.y + t * dy).toFixed(4)),
+  };
+}

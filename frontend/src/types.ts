@@ -17,6 +17,7 @@ export type AttachNodeName =
   | "TT_Attach"
   | "DT_Attach"
   | "ST_Attach"
+  | "ST_Attach2"
   | "Motor_Attach"
   | "SS_Attach"
   | "CS_Attach"
@@ -46,6 +47,8 @@ export interface ComponentDetail {
   preview_svg: string | null;
   attach_primary: Point | null;
   attach_block_name: string | null;
+  attach_secondary: Point | null;
+  attach_secondary_block_name: string | null;
   pa_default: Point | null;
   pb_default: Point | null;
   physical_length_mm: number | null;

@@ -10,6 +10,7 @@ from backend.config import settings
 from backend.scripts.vehicle_spec import (
     ALL_KNOWN_BLOCKS,
     CATEGORY_PRIMARY_BLOCK,
+    CATEGORY_SECONDARY_BLOCK,
     SKELETON_ATTACH_BLOCKS,
     VEHICLES,
 )
@@ -87,6 +88,12 @@ def extract_component_attach(dxf_path: str | Path, category: str) -> dict:
         "attach_primary": blocks.get(primary_block),
         "attach_block_name": primary_block,
     }
+    # Secondary attach point (e.g. ST_Attach2 for seat_tube → defines movement axis)
+    secondary_block = CATEGORY_SECONDARY_BLOCK.get(category)
+    if secondary_block:
+        data["attach_secondary"] = blocks.get(secondary_block)
+        data["attach_secondary_block_name"] = secondary_block if blocks.get(secondary_block) else None
+
     if category == "head_tube":
         data["pa_default"] = blocks.get("PA")
         data["pb_default"] = blocks.get("PB")

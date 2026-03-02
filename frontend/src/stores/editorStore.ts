@@ -23,6 +23,7 @@ import type {
 } from "../types";
 import {
   applyAxisConstraint,
+  applyVectorConstraint,
   computeHeadTubeAngleFromPaPb,
   computePaPbWorldFromHeadTube,
 } from "../utils/geometry";
@@ -440,9 +441,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         }
         nextPositions[category] = worldPos;
       } else if (category === "seat_tube") {
-        if (skeletonNode) {
+        const stNode = skeletonNode; // ST_Attach
+        const st2Node = state.skeleton?.nodes["ST_Attach2"];
+        if (stNode && st2Node) {
+          // ST_Attach2 present → constrain movement along ST_Attach→ST_Attach2 vector
+          nextPositions[category] = applyVectorConstraint(worldPos, stNode, st2Node);
+        } else if (stNode) {
           const fixedValue =
-            state.seatTubeAxisLock === "vertical" ? skeletonNode.x : skeletonNode.y;
+            state.seatTubeAxisLock === "vertical" ? stNode.x : stNode.y;
           nextPositions[category] = applyAxisConstraint(
             worldPos,
             state.seatTubeAxisLock,

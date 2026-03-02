@@ -45,6 +45,8 @@ class Component(Base):
     preview_svg: Mapped[str | None] = mapped_column(Text)
     attach_primary: Mapped[dict | None] = mapped_column(JSONB)
     attach_block_name: Mapped[str | None] = mapped_column(Text)
+    attach_secondary: Mapped[dict | None] = mapped_column(JSONB)
+    attach_secondary_block_name: Mapped[str | None] = mapped_column(Text)
     pa_default: Mapped[dict | None] = mapped_column(JSONB)
     pb_default: Mapped[dict | None] = mapped_column(JSONB)
 
