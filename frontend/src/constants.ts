@@ -1,6 +1,6 @@
 import type { AttachNodeName, Category, Vehicle } from "./types";
 
-export const VEHICLES: Vehicle[] = ["ASBGF-500", "RAGTD-44"];
+export const VEHICLES: Vehicle[] = ["ASBGF-500", "RAGTD-44", "RMBLC460"];
 
 export const CATEGORY_ORDER: Category[] = [
   "head_tube",

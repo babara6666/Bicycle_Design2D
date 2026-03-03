@@ -47,7 +47,7 @@ class GeminiImageService:
         #   - "gemini-2.0-flash-exp-image-generation" (alias on some SDK versions)
         #   - "gemini-2.5-flash-image"          (2025-08 release, may need paid tier)
         # Use gemini-2.0-flash-exp as it is the most broadly available:
-        self.model = "gemini-2.0-flash-exp"
+        self.model = "gemini-2.0-flash-preview-image-generation"
 
     # ── Internal helpers ───────────────────────────────────────────────────────
 

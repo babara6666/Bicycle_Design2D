@@ -61,4 +61,16 @@ VEHICLES = {
         "chain_stay": "cs-18x35x2.0t-l_ragtd-44.dwg",
         "fork_end": "PXHB-ED-L.dwg",
     },
+    "RMBLC460": {
+        "_folder": "RMBLC460",
+        "_skeleton": "RMBLC460_skeleton.dwg",
+        "head_tube": "rmgb-ht_62x54x150l.dwg",
+        "top_tube": "rmgb-hfttb(1.8)t_rmblc460.dwg",
+        "down_tube": "RMGB-HFDT-A(4-2.5)T_RMBLC460.dwg",
+        "seat_tube": "st_40x2.7t_rmblc460.dwg",
+        "motor_mount": "RMB6-NDE-A.dwg",
+        "seat_stay": "rmgb-ss(1.8)t-_rmblc460.dwg",
+        "chain_stay": "rmgb-csx1.8t-_rmblc460.dwg",
+        "fork_end": "rmgb-rdp-u1.dwg",
+    },
 }

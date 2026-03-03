@@ -54,7 +54,8 @@ export function ComponentPanel({
       <div className="component-list">
         {CATEGORY_ORDER.map((category) => {
           const options = catalog.filter((item) => item.category === category);
-          const selectedId = selectedComponentIds[category] ?? options[0]?.id;
+          const defaultId = options[0]?.id;
+          const selectedId = selectedComponentIds[category] ?? defaultId;
           const isSelectedCategory = selectedCategory === category;
           const isExpanded = expandedCategory === category;
           const angleDeg = categoryAngles[category] ?? 0;
@@ -65,6 +66,12 @@ export function ComponentPanel({
           const crossOptions = crossVehicleCatalog.filter(
             (item) => item.category === category && !currentVehicleIds.has(item.id),
           );
+
+          // Detect if currently selected part is from another vehicle
+          const isCrossVehicle = selectedId !== undefined && !currentVehicleIds.has(selectedId);
+          const crossSelected = isCrossVehicle
+            ? crossVehicleCatalog.find((item) => item.id === selectedId)
+            : null;
 
           return (
             <article
@@ -89,6 +96,7 @@ export function ComponentPanel({
               >
                 <h3>{CATEGORY_LABELS[category]}</h3>
                 <span style={{ fontSize: "0.75rem", opacity: 0.6 }}>
+                  {isCrossVehicle && <span style={{ color: "var(--accent, #6ee7b7)", marginRight: 4 }}>🔄</span>}
                   {angleDeg !== 0 ? `${angleDeg.toFixed(1)}°` : ""}
                   {isExpanded ? " ▲" : " ▼"}
                 </span>
@@ -98,9 +106,17 @@ export function ComponentPanel({
               <label onClick={(e) => e.stopPropagation()}>
                 <span>Part</span>
                 <select
-                  value={selectedId ?? ""}
-                  onChange={(event) => onSelectComponent(category, Number(event.target.value))}
+                  value={isCrossVehicle ? "__cross__" : (selectedId ?? "")}
+                  onChange={(event) => {
+                    const val = event.target.value;
+                    if (val !== "__cross__") onSelectComponent(category, Number(val));
+                  }}
                 >
+                  {isCrossVehicle && crossSelected && (
+                    <option value="__cross__" disabled>
+                      🔄 [{crossSelected.vehicle}] {crossSelected.full_code}
+                    </option>
+                  )}
                   {options.map((option) => (
                     <option key={option.id} value={option.id}>
                       {option.full_code}
@@ -108,6 +124,19 @@ export function ComponentPanel({
                   ))}
                 </select>
               </label>
+
+              {/* Restore default button when cross-vehicle part is active */}
+              {isCrossVehicle && defaultId && (
+                <div onClick={(e) => e.stopPropagation()} style={{ marginTop: 2 }}>
+                  <button
+                    type="button"
+                    style={{ fontSize: "0.72rem", opacity: 0.8, cursor: "pointer" }}
+                    onClick={() => onSelectComponent(category, defaultId)}
+                  >
+                    ↩ 還原預設零件
+                  </button>
+                </div>
+              )}
 
               {/* Cross-vehicle replacement (shown when expanded) */}
               {isExpanded && crossOptions.length > 0 && (
