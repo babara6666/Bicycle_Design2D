@@ -1,0 +1,233 @@
+/* ── Design Picker Page ──────────────────────────────────────────────── */
+.picker-shell {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 80% 20%, #e8f4fb 0%, #f0ece2 50%, #e6dfd0 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.picker-bg {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 30% 70%, rgba(30, 109, 144, 0.06) 0%, transparent 55%);
+  pointer-events: none;
+}
+
+.picker-content {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+}
+
+.picker-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 48px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.picker-back {
+  border: 1px solid rgba(30, 109, 144, 0.3);
+  border-radius: 999px;
+  background: #fff;
+  color: #1e6d90;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms, transform 120ms;
+  white-space: nowrap;
+}
+
+.picker-back:hover {
+  background: #e6f4fd;
+  transform: translateX(-2px);
+}
+
+.picker-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.picker-kicker {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: #1e6d90;
+}
+
+.picker-brand-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f263b;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+.picker-hero {
+  margin-bottom: 40px;
+}
+
+.picker-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 10px;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: clamp(24px, 3.5vw, 38px);
+  font-weight: 800;
+  color: #0d2233;
+}
+
+.picker-category-tag {
+  background: linear-gradient(135deg, #1e6d90, #2a8a5f);
+  color: #fff;
+  font-size: 14px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.picker-sub {
+  margin: 0;
+  font-size: 15px;
+  color: #476070;
+}
+
+/* Template Grid */
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.picker-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  border: 1.5px solid rgba(0, 0, 0, 0.08);
+  background: #fffef8;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.07);
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.picker-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.13);
+  border-color: #1e6d90;
+}
+
+/* Thumb */
+.picker-card-thumb {
+  position: relative;
+  height: 160px;
+  background: linear-gradient(145deg, #edf5fa, #f4ede1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.picker-card-thumb-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.picker-thumb-svg {
+  width: 100%;
+  max-height: 110px;
+}
+
+.picker-card-badge {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: rgba(0,0,0,0.12);
+  color: #334;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.picker-blank-thumb {
+  background: linear-gradient(145deg, #f4f4f0, #ececea);
+}
+
+.picker-blank-plus {
+  font-size: 44px;
+  color: #aab5bf;
+  line-height: 1;
+}
+
+/* Card info */
+.picker-card-info {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.picker-card-name {
+  margin: 0;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0d2233;
+}
+
+.picker-card:hover .picker-card-name {
+  color: #1e6d90;
+}
+
+.picker-card-desc {
+  margin: 0;
+  font-size: 13px;
+  color: #57707f;
+  line-height: 1.5;
+}
+
+.picker-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.picker-card-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #7a8f9d;
+  background: #edf2f5;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.picker-card-cta {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e6d90;
+  opacity: 0;
+  transition: opacity 180ms, transform 180ms;
+  transform: translateX(-4px);
+}
+
+.picker-card:hover .picker-card-cta {
+  opacity: 1;
+  transform: translateX(0);
+}

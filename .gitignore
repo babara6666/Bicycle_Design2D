@@ -72,3 +72,7 @@ nul
 # ── Internal design documents (not for public repo) ──────────────────────────
 \# IBDS*.md
 STARTUP.md
+
+# Log files
+svg_log.txt
+svg_log2.txt

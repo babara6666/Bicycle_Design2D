@@ -63,8 +63,8 @@ export function GeometryPanel({
         <input
           id="head-angle"
           type="range"
-          min={-25}
-          max={25}
+          min={-180}
+          max={180}
           step={0.1}
           value={headTubeAngleDeg}
           onChange={(event) => onHeadTubeAngleChange(Number(event.target.value))}

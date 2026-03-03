@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
+import { BrowserRouter, Routes, Route, useSearchParams } from "react-router-dom";
 import AIBrandPartsModal from "./components/AIBrandPartsModal";
 import AIImageModal from "./components/AIImageModal";
 import AIPartReplaceModal from "./components/AIPartReplaceModal";
@@ -9,18 +9,27 @@ import GeminiKeyModal from "./components/GeminiKeyModal";
 import { ComponentPanel } from "./components/ComponentPanel";
 import { GeometryPanel } from "./components/GeometryPanel";
 import { HeaderBar } from "./components/HeaderBar";
-import { LoginPage } from "./components/LoginPage";
 import { Viewer2D } from "./components/Viewer2D";
 import { REQUIRED_NODES } from "./constants";
-import { useAuthStore } from "./stores/authStore";
 import { useEditorStore } from "./stores/editorStore";
 import type { Category, ComponentDetail } from "./types";
 import { captureSvgToPng } from "./utils/capture";
+import LandingPage from "./pages/LandingPage";
+import DesignPickerPage from "./pages/DesignPickerPage";
 import "./App.css";
 
 function App() {
-  // AUTH DISABLED — skip login
-  return <AuthenticatedApp username="dev" role="admin" onLogout={() => {}} />;
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/designs/:typeCode" element={<DesignPickerPage />} />
+        <Route path="/editor" element={<AuthenticatedApp username="dev" role="admin" onLogout={() => {}} />} />
+        {/* legacy: if someone lands on root without routing, show editor directly */}
+        <Route path="*" element={<AuthenticatedApp username="dev" role="admin" onLogout={() => {}} />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 interface AuthenticatedAppProps {
@@ -108,9 +117,21 @@ function AuthenticatedApp({ username, role, onLogout }: AuthenticatedAppProps) {
     confirmPaPb,
   } = useEditorStore();
 
+  const [searchParams] = useSearchParams();
+
   useEffect(() => {
     void initialize();
   }, [initialize]);
+
+  // Auto-switch vehicle from URL ?vehicle= after init completes
+  useEffect(() => {
+    const vehicleParam = searchParams.get("vehicle");
+    if (vehicleParam && vehicle !== vehicleParam) {
+      void setVehicle(vehicleParam as import("./types").Vehicle);
+    }
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const selectedComponents = useMemo(() => {
     const details: ComponentDetail[] = [];

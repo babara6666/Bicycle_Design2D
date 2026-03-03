@@ -443,6 +443,7 @@ async def ai_refine(
         )
         return AIImageResponse(**result)
     except Exception as exc:
+        print(f"[AI /refine ERROR] {type(exc).__name__}: {exc}")
         return AIImageResponse(error=str(exc))
 
 

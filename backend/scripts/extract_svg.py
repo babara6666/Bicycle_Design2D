@@ -146,7 +146,7 @@ def extract_svg_preview(dxf_path: str | Path, padding: int = 20) -> str:
         ref_dim = float("inf")
     # Circles/arcs with radius > this fraction of the reference dimension are
     # treated as construction geometry and dropped.
-    MAX_RADIUS_RATIO = 0.15
+    MAX_RADIUS_RATIO = 0.06
     max_allowed_radius = ref_dim * MAX_RADIUS_RATIO
 
     # ── Pass 2: build SVG elements, skipping oversized circles/arcs ──────────

@@ -492,8 +492,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         x: Number((current.x + dx).toFixed(4)),
         y: Number((current.y + dy).toFixed(4)),
       };
+      const nextPositions = { ...state.categoryPositions, [category]: next };
+
+      // Shift PA/PB by the same delta when nudging head_tube
+      let nextPa = state.paPosition;
+      let nextPb = state.pbPosition;
+      if (category === "head_tube") {
+        if (nextPa) nextPa = { x: Number((nextPa.x + dx).toFixed(4)), y: Number((nextPa.y + dy).toFixed(4)) };
+        if (nextPb) nextPb = { x: Number((nextPb.x + dx).toFixed(4)), y: Number((nextPb.y + dy).toFixed(4)) };
+      }
+
       return {
-        categoryPositions: { ...state.categoryPositions, [category]: next },
+        categoryPositions: nextPositions,
+        paPosition: nextPa,
+        pbPosition: nextPb,
       };
     }),
 

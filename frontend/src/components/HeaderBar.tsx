@@ -108,15 +108,8 @@ export function HeaderBar({
           <button className="ai-tool-btn purple" onClick={onOpenAIImage} type="button" title="AI 行銷宣傳圖" disabled={!geminiKeySet}>
             ✨ 行銷圖
           </button>
-          <button className="ai-tool-btn amber" onClick={onOpenAIBrandParts} type="button" title="AI 他牌零件生成" disabled={!geminiKeySet}>
-            ⚙ 他牌
-          </button>
-          <button className="ai-tool-btn green" onClick={onOpenAIReplacePart} type="button" title="AI 零件替換" disabled={!geminiKeySet}>
-            ⇄ 替換
-          </button>
-          <button className="ai-tool-btn cyan" onClick={onOpenAISimilar} type="button" title="AI 相似圖片生成" disabled={!geminiKeySet}>
-            ⊙ 相似
-          </button>
+          {/* ⚙ 他牌 — hidden */}
+          {/* ⊙ 相似 — hidden */}
           <button className="ai-tool-btn red" onClick={onOpenDrawing} type="button" title="出圖 / 匯出 DWG">
             ⬇ 出圖
           </button>
