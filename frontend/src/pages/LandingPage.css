@@ -1,14 +1,10 @@
 /* ── Landing Page ────────────────────────────────────────────────────── */
 .landing-shell {
   min-height: 100vh;
-  background: radial-gradient(
-    ellipse at 20% 10%,
-    #e8f4fb 0%,
-    #f0ece2 45%,
-    #e6dfd0 100%
-  );
+  background: var(--bg-page, radial-gradient(ellipse at 20% 10%, #e8f4fb 0%, #f0ece2 45%, #e6dfd0 100%));
   position: relative;
   overflow: hidden;
+  color: var(--text-strong);
 }
 
 .landing-bg {
@@ -43,8 +39,33 @@
   justify-content: space-between;
   margin-bottom: 56px;
   padding-bottom: 18px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid var(--card-border, rgba(0,0,0,0.08));
 }
+
+.landing-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.landing-company {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.landing-pill-btn {
+  border: 1px solid var(--card-border, rgba(0,0,0,0.12));
+  border-radius: 999px;
+  background: var(--card-bg, #fff);
+  color: var(--text-strong);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms;
+}
+.landing-pill-btn:hover { opacity: 0.8; }
 
 .landing-brand {
   display: flex;
@@ -138,18 +159,15 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 12px;
-  padding: 28px 24px;
+  gap: 10px;
+  padding: 24px 22px;
   border-radius: 22px;
-  border: 1.5px solid rgba(0, 0, 0, 0.08);
-  background: #fffef8;
+  border: 1.5px solid var(--card-border, rgba(0,0,0,0.08));
+  background: var(--card-bg, #fffef8);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.07);
   cursor: pointer;
   text-align: left;
-  transition:
-    transform 200ms ease,
-    box-shadow 200ms ease,
-    border-color 200ms ease;
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
   position: relative;
   overflow: hidden;
 }

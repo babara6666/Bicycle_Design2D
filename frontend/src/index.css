@@ -1,10 +1,12 @@
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap");
 
+/* ── Light mode (default) ─────────────────────────────────────────────── */
 :root {
   --bg-ink: #061524;
   --bg-ink-soft: #0d2437;
   --bg-surface: #f4efe5;
   --bg-surface-alt: #fffaf2;
+  --bg-page: linear-gradient(140deg, #eee8dc, #f4f0e8 52%, #dde7ef 100%);
   --line-dark: #17334a;
   --line-soft: #d7c9ad;
   --text-strong: #102337;
@@ -13,6 +15,9 @@
   --brand-2: #d88b4a;
   --warn: #d97534;
   --ok: #2f8a5f;
+  --card-bg: #fffef8;
+  --card-border: rgba(0,0,0,0.08);
+  --header-bg: linear-gradient(125deg, #fdf7eaee, #f6eee4dc);
 
   font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
   line-height: 1.4;
@@ -21,6 +26,20 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Dark mode ────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg-surface: #1a2535;
+  --bg-surface-alt: #1f2d3d;
+  --bg-page: linear-gradient(140deg, #0f1e2d, #162030 52%, #1a2c40 100%);
+  --line-dark: #a0b8cc;
+  --line-soft: #3a5268;
+  --text-strong: #e2edf5;
+  --text-muted: #8daabf;
+  --card-bg: #1c2b3a;
+  --card-border: rgba(255,255,255,0.08);
+  --header-bg: linear-gradient(125deg, #1c2b3acc, #162030cc);
 }
 
 * {
@@ -37,9 +56,13 @@ body,
 
 body {
   min-width: 320px;
-  background:
-    radial-gradient(circle at 12% 12%, #ffd89f22 0, transparent 32%),
-    radial-gradient(circle at 82% 88%, #76c3e022 0, transparent 36%),
-    linear-gradient(140deg, var(--bg-ink), #0f2a3f 52%, #20384a 100%);
+  background: var(--bg-page);
   color: var(--text-strong);
+}
+
+/* Landing & picker pages sit outside app-shell and need normal scroll */
+.landing-shell,
+.picker-shell {
+  overflow-y: auto;
+  height: 100%;
 }

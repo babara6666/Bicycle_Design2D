@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 
 import { VEHICLES } from "../constants";
 import { useGeminiKeyStore } from "../stores/geminiKeyStore";
+import { useLangStore } from "../stores/langStore";
+import { useThemeStore } from "../stores/themeStore";
 import type { Vehicle } from "../types";
 
 interface HeaderBarProps {
@@ -47,11 +49,13 @@ export function HeaderBar({
   const [loadIdInput, setLoadIdInput] = useState("");
   const navigate = useNavigate();
   const geminiKeySet = !!useGeminiKeyStore((s) => s.apiKey);
+  const { theme, toggle: toggleTheme } = useThemeStore();
+  const { lang, toggle: toggleLang } = useLangStore();
 
   return (
     <header className="header-bar">
-      {/* Home logo button */}
-      <div className="header-home">
+      {/* Logo + Title inline */}
+      <div className="header-home-brand">
         <button
           className="header-logo-btn"
           type="button"
@@ -60,15 +64,13 @@ export function HeaderBar({
         >
           <img src="/company-logo.png" alt="IBDS" className="header-logo-img" />
         </button>
-      </div>
-
-      <div className="header-brand">
-        <p className="header-kicker">IBDS</p>
-        <h1>Bicycle 2D AutoCAD Editor</h1>
-        <p className="header-subline">
-          {configurationId ? `Config #${configurationId}` : "Unsaved configuration"}
-          {configurationNote ? ` - ${configurationNote}` : ""}
-        </p>
+        <div className="header-brand">
+          <h1>Bicycle 2D Design Studio</h1>
+          <p className="header-subline">
+            {configurationId ? `Config #${configurationId}` : "Unsaved"}
+            {configurationNote ? ` - ${configurationNote}` : ""}
+          </p>
+        </div>
       </div>
 
       <div className="header-actions">
@@ -113,13 +115,10 @@ export function HeaderBar({
             className={`ai-tool-btn key-btn ${geminiKeySet ? "key-set" : "key-unset"}`}
             onClick={onOpenGeminiKey}
             type="button"
-            title={geminiKeySet ? "Gemini API Key 已設定，點擊修改" : "尚未設定 Gemini API Key，點擊輸入"}
+            title={geminiKeySet ? "Gemini API Key 已設定" : "設定 Gemini API Key"}
           >
             🔑
           </button>
-          {/* ✨ 行銷圖 — hidden */}
-          {/* ⚙ 他牌 — hidden */}
-          {/* ⊙ 相似 — hidden */}
           <button
             className="ai-tool-btn green"
             onClick={onOpenAIReplacePart}
@@ -127,10 +126,16 @@ export function HeaderBar({
             title="AI 零件替換"
             disabled={!geminiKeySet}
           >
-            ⇄ 換零件
+            ⇄ {lang === "zh" ? "換零件" : "Replace"}
           </button>
-          <button className="ai-tool-btn red" onClick={onOpenDrawing} type="button" title="出圖 / 匯出 DWG">
-            ⬇ 出圖
+          <button className="ai-tool-btn red" onClick={onOpenDrawing} type="button" title="出圖">
+            ⬇ {lang === "zh" ? "出圖" : "Export"}
+          </button>
+          <button className="ai-tool-btn" onClick={toggleLang} type="button" title="切換語言">
+            {lang === "zh" ? "EN" : "中"}
+          </button>
+          <button className="ai-tool-btn" onClick={toggleTheme} type="button" title="切換主題">
+            {theme === "light" ? "🌙" : "☀️"}
           </button>
         </div>
 

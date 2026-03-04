@@ -1,78 +1,80 @@
 import { useNavigate } from "react-router-dom";
+import { useLangStore } from "../stores/langStore";
+import { useThemeStore } from "../stores/themeStore";
 import "./LandingPage.css";
+
+const LABELS = {
+  zh: {
+    badge: "開始設計",
+    heroTitle: "選擇您的",
+    heroAccent: "車架類型",
+    heroSub: "選擇車種類別，從模板開始客製化您的 2D 自行車工程圖",
+    directBtn: "開啟編輯器 →",
+    company: "太宇工業有限公司",
+  },
+  en: {
+    badge: "Start Design",
+    heroTitle: "Choose Your ",
+    heroAccent: "Frame Type",
+    heroSub: "Pick a category and start customising your 2D bicycle engineering drawing.",
+    directBtn: "Open Editor →",
+    company: "TY Industrial Co., Ltd.",
+  },
+};
 
 interface BikeCategory {
   code: string;
-  name: string;
-  nameEn: string;
-  photo: string;
-  desc: string;
+  zh: string;
+  en: string;
+  sub: string;
+  icon: string;
   color: string;
 }
 
 const CATEGORIES: BikeCategory[] = [
-  {
-    code: "Male",
-    name: "男車",
-    nameEn: "Male Frame",
-    photo: "/ASBGF-500.png",
-    desc: "鑽石形車架，適合城市通勤與運動騎乘",
-    color: "#1e6d90",
-  },
-  {
-    code: "Female",
-    name: "女車",
-    nameEn: "Female Frame",
-    photo: "/RESLA-450.png",
-    desc: "低跨管設計，便於上下車，優雅舒適",
-    color: "#a0522d",
-  },
-  {
-    code: "Wave",
-    name: "Wave",
-    nameEn: "Wave Frame",
-    photo: "/WB4GI8A_48.png",
-    desc: "流線弧形車架，兼顧時尚與實用",
-    color: "#2a8a5f",
-  },
+  { code: "Male",     zh: "男車",   en: "Male Frame",     sub: "Male Frame",     icon: "🚴", color: "#1e6d90" },
+  { code: "Female",   zh: "女車",   en: "Female Frame",   sub: "Female Frame",   icon: "🚲", color: "#a0522d" },
+  { code: "Wave",     zh: "Wave",   en: "Wave Frame",     sub: "Wave Frame",     icon: "🏍", color: "#2a8a5f" },
+  { code: "Mountain", zh: "登山車", en: "Mountain Bike",  sub: "Mountain Bike",  icon: "⛰️", color: "#6a4c2a" },
 ];
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { lang, toggle: toggleLang } = useLangStore();
+  const { theme, toggle: toggleTheme } = useThemeStore();
+  const L = LABELS[lang];
 
   return (
     <div className="landing-shell">
-      {/* Background */}
       <div className="landing-bg" />
-
       <div className="landing-content">
+
         {/* Header */}
         <header className="landing-header">
           <div className="landing-brand">
-            <img
-              src="/company-logo.png"
-              alt="IBDS"
-              className="landing-logo"
-            />
-            <div>
-              <span className="landing-kicker">IBDS</span>
-              <h1 className="landing-title">Bicycle 2D Design Studio</h1>
-            </div>
+            <img src="/company-logo.png" alt="IBDS" className="landing-logo" />
+            <h1 className="landing-title">Bicycle 2D Design Studio</h1>
           </div>
-          <div className="landing-header-sub">
-            <span>太宇工業有限公司</span>
+          <div className="landing-header-right">
+            <span className="landing-company">{L.company}</span>
+            {/* Lang toggle */}
+            <button className="landing-pill-btn" onClick={toggleLang} type="button" title="切換語言">
+              {lang === "zh" ? "EN" : "中"}
+            </button>
+            {/* Dark/Light toggle */}
+            <button className="landing-pill-btn" onClick={toggleTheme} type="button" title="切換主題">
+              {theme === "light" ? "🌙" : "☀️"}
+            </button>
           </div>
         </header>
 
         {/* Hero */}
         <section className="landing-hero">
-          <div className="landing-hero-badge">開始設計</div>
+          <div className="landing-hero-badge">{L.badge}</div>
           <h2 className="landing-hero-title">
-            選擇您的<span className="landing-hero-accent">車架類型</span>
+            {L.heroTitle}<span className="landing-hero-accent">{L.heroAccent}</span>
           </h2>
-          <p className="landing-hero-sub">
-            選擇車種類別，從模板開始客製化您的 2D 自行車工程圖
-          </p>
+          <p className="landing-hero-sub">{L.heroSub}</p>
         </section>
 
         {/* Category Grid */}
@@ -85,20 +87,10 @@ export default function LandingPage() {
               onClick={() => navigate(`/designs/${cat.code}`)}
               type="button"
             >
-              <div className="landing-card-photo-wrap">
-                <img
-                  src={cat.photo}
-                  alt={cat.name}
-                  className="landing-card-photo"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = "none";
-                  }}
-                />
-              </div>
+              <div className="landing-card-icon">{cat.icon}</div>
               <div className="landing-card-body">
-                <h3 className="landing-card-name">{cat.name}</h3>
-                <p className="landing-card-en">{cat.nameEn}</p>
-                <p className="landing-card-desc">{cat.desc}</p>
+                <h3 className="landing-card-name">{lang === "zh" ? cat.zh : cat.en}</h3>
+                <p className="landing-card-en">{cat.sub}</p>
               </div>
               <div className="landing-card-arrow">→</div>
             </button>
@@ -107,15 +99,15 @@ export default function LandingPage() {
 
         {/* Or go directly */}
         <div className="landing-direct">
-          <span>或直接</span>
           <button
             className="landing-direct-btn"
             onClick={() => navigate("/editor")}
             type="button"
           >
-            開啟編輯器 →
+            {L.directBtn}
           </button>
         </div>
+
       </div>
     </div>
   );

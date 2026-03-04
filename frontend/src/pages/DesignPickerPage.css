@@ -1,9 +1,10 @@
 /* ── Design Picker Page ──────────────────────────────────────────────── */
 .picker-shell {
   min-height: 100vh;
-  background: radial-gradient(ellipse at 80% 20%, #e8f4fb 0%, #f0ece2 50%, #e6dfd0 100%);
+  background: var(--bg-page, radial-gradient(ellipse at 80% 20%, #e8f4fb 0%, #f0ece2 50%, #e6dfd0 100%));
   position: relative;
   overflow: hidden;
+  color: var(--text-strong);
 }
 
 .picker-bg {
@@ -21,14 +22,53 @@
   padding: 28px 24px 60px;
 }
 
+/* Header layout */
 .picker-header {
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 48px;
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid var(--card-border, rgba(0,0,0,0.08));
 }
+
+.picker-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.picker-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.picker-logo-btn {
+  display: flex;
+  align-items: center;
+  border: 1px solid #c8bba455;
+  border-radius: 12px;
+  background: transparent;
+  padding: 3px 6px;
+  cursor: pointer;
+  transition: background 150ms;
+}
+.picker-logo-btn:hover { background: #ffe8c850; }
+
+.picker-pill-btn {
+  border: 1px solid var(--card-border, rgba(0,0,0,0.12));
+  border-radius: 999px;
+  background: var(--card-bg, #fff);
+  color: var(--text-strong);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms;
+}
+.picker-pill-btn:hover { opacity: 0.8; }
 
 .picker-back {
   border: 1px solid rgba(30, 109, 144, 0.3);
@@ -124,8 +164,8 @@
   display: flex;
   flex-direction: column;
   border-radius: 20px;
-  border: 1.5px solid rgba(0, 0, 0, 0.08);
-  background: #fffef8;
+  border: 1.5px solid var(--card-border, rgba(0,0,0,0.08));
+  background: var(--card-bg, #fffef8);
   box-shadow: 0 6px 22px rgba(0, 0, 0, 0.07);
   overflow: hidden;
   cursor: pointer;
@@ -139,23 +179,16 @@
   border-color: #1e6d90;
 }
 
-/* Thumb */
+/* Thumb — photo fills fully, no padding */
 .picker-card-thumb {
   position: relative;
-  height: 160px;
-  background: linear-gradient(145deg, #edf5fa, #f4ede1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+  height: 180px;
+  overflow: hidden;
+  background: #edf5fa;
 }
 
 .picker-card-thumb-inner {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: none; /* no longer used */
 }
 
 .picker-thumb-svg {
@@ -166,7 +199,8 @@
 .picker-thumb-photo {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  display: block;
   transition: transform 260ms ease;
 }
 
