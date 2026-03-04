@@ -1,20 +1,27 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { VEHICLES } from "../constants";
 import type { Vehicle } from "../types";
 import "./DesignPickerPage.css";
 
 // Map category code → which vehicles belong to it
-// Extend this when you add real categorisation in the DB
 const CATEGORY_VEHICLES: Record<string, Vehicle[]> = {
-  Male: ["ASBGF-500", "RAGTD-44", "RMBLC460"],
-  Female: ["ASBGF-500"],
-  Wave: ["RAGTD-44"],
-  Suspension: ["RMBLC460"],
+  Male: ["ASBGF-500", "RAGTD-44"],
+  Female: ["RESLA-450", "RMBLC460"],
+  Wave: ["WB4GI8A_48"],
+};
+
+// Vehicle → photo in public/
+const VEHICLE_PHOTOS: Record<Vehicle, string> = {
+  "ASBGF-500": "/ASBGF-500.png",
+  "RAGTD-44": "/RAGTD-44.png",
+  "RESLA-450": "/RESLA-450.png",
+  "RMBLC460": "/RMBLC460.png",
+  "WB4GI8A_48": "/WB4GI8A_48.png",
 };
 
 // Fallback: if a category is unknown, show all vehicles
 function vehiclesForCategory(code: string): Vehicle[] {
-  return CATEGORY_VEHICLES[code] ?? (VEHICLES as Vehicle[]);
+  const all: Vehicle[] = ["ASBGF-500", "RAGTD-44", "RESLA-450", "RMBLC460", "WB4GI8A_48"];
+  return CATEGORY_VEHICLES[code] ?? all;
 }
 
 export default function DesignPickerPage() {
@@ -41,8 +48,17 @@ export default function DesignPickerPage() {
             ← 返回
           </button>
           <div className="picker-brand">
-            <span className="picker-kicker">IBDS</span>
-            <span className="picker-brand-name">Bicycle 2D Design Studio</span>
+            <img
+              src="/company-logo.png"
+              alt="IBDS"
+              className="picker-logo"
+              onClick={() => navigate("/")}
+              style={{ cursor: "pointer", height: 40, objectFit: "contain" }}
+            />
+            <div>
+              <span className="picker-kicker">IBDS</span>
+              <span className="picker-brand-name">Bicycle 2D Design Studio</span>
+            </div>
           </div>
         </header>
 
@@ -64,20 +80,17 @@ export default function DesignPickerPage() {
               onClick={() => handleSelect(vehicle)}
               type="button"
             >
-              {/* SVG Preview placeholder */}
+              {/* Photo Preview */}
               <div className="picker-card-thumb">
                 <div className="picker-card-thumb-inner">
-                  <svg viewBox="0 0 100 60" className="picker-thumb-svg">
-                    {/* Stylised frame icon */}
-                    <rect x="10" y="25" width="80" height="2" rx="1" fill="#1e6d90" opacity="0.3" />
-                    <circle cx="22" cy="45" r="10" stroke="#1e6d90" strokeWidth="2" fill="none" opacity="0.4" />
-                    <circle cx="78" cy="45" r="10" stroke="#1e6d90" strokeWidth="2" fill="none" opacity="0.4" />
-                    <line x1="22" y1="26" x2="40" y2="10" stroke="#1e6d90" strokeWidth="2" opacity="0.5" />
-                    <line x1="40" y1="10" x2="78" y2="26" stroke="#1e6d90" strokeWidth="2" opacity="0.5" />
-                    <line x1="40" y1="10" x2="40" y2="45" stroke="#1e6d90" strokeWidth="2" opacity="0.5" />
-                    <line x1="22" y1="35" x2="40" y2="26" stroke="#1e6d90" strokeWidth="1.5" opacity="0.4" />
-                    <line x1="78" y1="35" x2="60" y2="45" stroke="#1e6d90" strokeWidth="1.5" opacity="0.4" />
-                  </svg>
+                  <img
+                    src={VEHICLE_PHOTOS[vehicle]}
+                    alt={vehicle}
+                    className="picker-thumb-photo"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
+                  />
                 </div>
                 <span className="picker-card-badge">{typeCode}</span>
               </div>

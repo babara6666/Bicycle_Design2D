@@ -20,11 +20,39 @@
   padding: 10px 18px;
 }
 
+/* Home logo section */
+.header-home {
+  flex-shrink: 0;
+}
+
+.header-logo-btn {
+  display: flex;
+  align-items: center;
+  border: 1px solid #c8bba455;
+  border-radius: 12px;
+  background: #fffaf3;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: background 150ms, transform 130ms;
+}
+
+.header-logo-btn:hover {
+  background: #ffe8c8;
+  transform: scale(1.04);
+}
+
+.header-logo-img {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+}
+
 .header-brand {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
+
 
 .header-kicker {
   margin: 0;

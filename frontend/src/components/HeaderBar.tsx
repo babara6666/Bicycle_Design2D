@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { VEHICLES } from "../constants";
 import { useGeminiKeyStore } from "../stores/geminiKeyStore";
@@ -37,19 +38,30 @@ export function HeaderBar({
   onSaveNewConfiguration,
   onUpdateConfigurationConstraints,
   onLoadConfiguration,
-  onOpenAIImage,
-  onOpenAIBrandParts,
+  // onOpenAIImage, onOpenAIBrandParts, onOpenAISimilar — hidden, not used
   onOpenAIReplacePart,
-  onOpenAISimilar,
   onOpenDrawing,
   onOpenGeminiKey,
   onLogout,
 }: HeaderBarProps) {
   const [loadIdInput, setLoadIdInput] = useState("");
+  const navigate = useNavigate();
   const geminiKeySet = !!useGeminiKeyStore((s) => s.apiKey);
 
   return (
     <header className="header-bar">
+      {/* Home logo button */}
+      <div className="header-home">
+        <button
+          className="header-logo-btn"
+          type="button"
+          title="回首頁"
+          onClick={() => navigate("/")}
+        >
+          <img src="/company-logo.png" alt="IBDS" className="header-logo-img" />
+        </button>
+      </div>
+
       <div className="header-brand">
         <p className="header-kicker">IBDS</p>
         <h1>Bicycle 2D AutoCAD Editor</h1>
@@ -105,11 +117,18 @@ export function HeaderBar({
           >
             🔑
           </button>
-          <button className="ai-tool-btn purple" onClick={onOpenAIImage} type="button" title="AI 行銷宣傳圖" disabled={!geminiKeySet}>
-            ✨ 行銷圖
-          </button>
+          {/* ✨ 行銷圖 — hidden */}
           {/* ⚙ 他牌 — hidden */}
           {/* ⊙ 相似 — hidden */}
+          <button
+            className="ai-tool-btn green"
+            onClick={onOpenAIReplacePart}
+            type="button"
+            title="AI 零件替換"
+            disabled={!geminiKeySet}
+          >
+            ⇄ 換零件
+          </button>
           <button className="ai-tool-btn red" onClick={onOpenDrawing} type="button" title="出圖 / 匯出 DWG">
             ⬇ 出圖
           </button>
