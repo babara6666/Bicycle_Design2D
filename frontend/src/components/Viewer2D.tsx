@@ -17,6 +17,8 @@ interface Viewer2DProps {
   headTubeAngleDeg: number;
   paPosition: Point | null;
   pbPosition: Point | null;
+  showSkeleton: boolean;
+  onToggleSkeletonVisibility: () => void;
   onSelectCategory: (category: Category) => void;
   onSetPaPosition: (point: Point) => void;
   onSetPbPosition: (point: Point) => void;
@@ -112,6 +114,8 @@ export const Viewer2D = forwardRef<SVGSVGElement, Viewer2DProps>(function Viewer
   headTubeAngleDeg,
   paPosition,
   pbPosition,
+  showSkeleton,
+  onToggleSkeletonVisibility,
   onSelectCategory,
   onSetPaPosition,
   onSetPbPosition,
@@ -355,7 +359,7 @@ export const Viewer2D = forwardRef<SVGSVGElement, Viewer2DProps>(function Viewer
           {/* skeletonCentreShift 套在整個 world layer，讓 skeleton、
               components、node markers 全部在同一個偏移空間對齊 */}
           <g transform={skeletonCentreTransform(parsedSkeleton?.viewBox ?? null)}>
-          {parsedSkeleton ? (
+          {showSkeleton && parsedSkeleton ? (
             <g
               className="skeleton-layer"
               opacity={0.45}
@@ -445,14 +449,16 @@ export const Viewer2D = forwardRef<SVGSVGElement, Viewer2DProps>(function Viewer
             );
           })}
 
-          {nodeMarkers.map(([name, point]) => {
-            const renderPoint = worldToRender(point);
-            return (
-              <g key={name} className="attach-node">
-                <circle cx={renderPoint.x} cy={renderPoint.y} r={1.8} />
-              </g>
-            );
-          })}
+          {showSkeleton
+            ? nodeMarkers.map(([name, point]) => {
+                const renderPoint = worldToRender(point);
+                return (
+                  <g key={name} className="attach-node">
+                    <circle cx={renderPoint.x} cy={renderPoint.y} r={1.8} />
+                  </g>
+                );
+              })
+            : null}
           </g> {/* end skeletonCentreShift layer */}
         </g>
 
@@ -488,6 +494,16 @@ export const Viewer2D = forwardRef<SVGSVGElement, Viewer2DProps>(function Viewer
           </g>
         ) : null}
       </svg>
+
+      <div className="viewer-toolbar">
+        <button
+          type="button"
+          className={`viewer-toggle ${showSkeleton ? "active" : ""}`}
+          onClick={onToggleSkeletonVisibility}
+        >
+          {showSkeleton ? "Hide Skeleton" : "Show Skeleton"}
+        </button>
+      </div>
 
       <div className="viewer-hint">
         <p>

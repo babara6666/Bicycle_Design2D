@@ -425,7 +425,7 @@ def _get_gemini(http_request: Request):
                 "請點擊工具列的 🔑 按鈕輸入您的 Google Gemini API Key。"
             ),
         )
-    return GeminiImageService(api_key)
+    return GeminiImageService(api_key, settings.gemini_image_model)
 
 
 @app.post("/api/ai/refine", response_model=AIImageResponse)

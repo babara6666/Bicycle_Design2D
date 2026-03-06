@@ -1,21 +1,13 @@
-"""
-Gemini Image Generation Service — Nano Banana 2
-Model: gemini-2.0-flash-preview-image-generation
-
-All methods are async-compatible via `asyncio.to_thread`.
-"""
-
 from __future__ import annotations
 
 import base64
 import io
+from collections.abc import Iterable
 from typing import Optional
 
 from PIL import Image
 from google import genai
 from google.genai import types
-
-# ── Prompts ────────────────────────────────────────────────────────────────────
 
 MARKETING_PROMPT = (
     "This is a 2D technical drawing of a bicycle frame generated from AutoCAD geometry. "
@@ -32,24 +24,29 @@ BRAND_PARTS_SYSTEM = (
     "The image shows a 2D technical drawing (AutoCAD-style) of a bicycle frame assembly. "
     "The user wants to visually explore how specific brand parts would look on this frame.\n\n"
     "RULES:\n"
-    "1. Maintain the 2D drawing style — do NOT convert to 3D.\n"
+    "1. Maintain the 2D drawing style; do NOT convert to 3D.\n"
     "2. Identify the part the user mentions and sketch how the brand equivalent would look.\n"
     "3. Keep proportions and connections consistent with the existing geometry.\n"
-    "4. Preserve the overall frame structure — only change the specified part.\n"
+    "4. Preserve the overall frame structure; only change the specified part.\n"
 )
 
 
 class GeminiImageService:
-    def __init__(self, api_key: str) -> None:
-        self.client = genai.Client(api_key=api_key)
-        # Image-output capable models (generateContent with Image modality):
-        #   - "gemini-2.0-flash-exp"            (experimental, 2.0, free tier OK)
-        #   - "gemini-2.0-flash-exp-image-generation" (alias on some SDK versions)
-        #   - "gemini-2.5-flash-image"          (2025-08 release, may need paid tier)
-        # Use gemini-2.0-flash-exp as it is the most broadly available:
-        self.model = "gemini-2.0-flash-exp"
+    _FALLBACK_MODELS: tuple[str, ...] = (
+        "gemini-2.5-flash-image",
+        "gemini-2.0-flash-exp-image-generation",
+        "gemini-2.0-flash-exp",
+    )
 
-    # ── Internal helpers ───────────────────────────────────────────────────────
+    def __init__(self, api_key: str, preferred_model: str | None = None) -> None:
+        self.client = genai.Client(api_key=api_key)
+        models: list[str] = []
+        if preferred_model and preferred_model.strip():
+            models.append(preferred_model.strip())
+        for fallback in self._FALLBACK_MODELS:
+            if fallback not in models:
+                models.append(fallback)
+        self.models = models
 
     @staticmethod
     def _decode_image(b64: str) -> Image.Image:
@@ -58,35 +55,82 @@ class GeminiImageService:
         return Image.open(io.BytesIO(base64.b64decode(b64)))
 
     @staticmethod
-    def _encode_image(img: Image.Image) -> str:
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        return base64.b64encode(buf.getvalue()).decode("utf-8")
+    def _iter_parts(response) -> Iterable:
+        direct_parts = getattr(response, "parts", None)
+        if direct_parts:
+            for part in direct_parts:
+                yield part
+
+        for candidate in getattr(response, "candidates", []) or []:
+            content = getattr(candidate, "content", None)
+            for part in getattr(content, "parts", []) or []:
+                yield part
+
+    @staticmethod
+    def _normalize_inline_data(raw: str | bytes | bytearray | None) -> str | None:
+        if raw is None:
+            return None
+        if isinstance(raw, (bytes, bytearray)):
+            return base64.b64encode(raw).decode("utf-8")
+
+        value = str(raw)
+        if value.startswith("data:") and "," in value:
+            value = value.split(",", 1)[1]
+        return value
 
     def _extract_result(self, response) -> dict:
         result: dict = {"text": None, "image_base64": None}
-        for part in response.parts:
-            if part.text is not None:
-                result["text"] = part.text
-            elif part.inline_data is not None:
-                raw = part.inline_data.data
-                if isinstance(raw, bytes):
-                    result["image_base64"] = base64.b64encode(raw).decode("utf-8")
-                else:
-                    result["image_base64"] = raw
+        texts: list[str] = []
+
+        for part in self._iter_parts(response):
+            text = getattr(part, "text", None)
+            if text:
+                texts.append(text)
+
+            inline_data = getattr(part, "inline_data", None)
+            raw = getattr(inline_data, "data", None) if inline_data is not None else None
+            encoded = self._normalize_inline_data(raw)
+            if encoded:
+                result["image_base64"] = encoded
+
+        if texts:
+            result["text"] = "\n\n".join(texts)
+
         return result
 
     def _generate(self, contents: list) -> dict:
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=contents,
-            config=types.GenerateContentConfig(
-                response_modalities=["Text", "Image"],
-            ),
-        )
-        return self._extract_result(response)
+        last_exc: Exception | None = None
 
-    # ── Public methods ─────────────────────────────────────────────────────────
+        for idx, model in enumerate(self.models):
+            try:
+                response = self.client.models.generate_content(
+                    model=model,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        response_modalities=["TEXT", "IMAGE"],
+                    ),
+                )
+                result = self._extract_result(response)
+                if result.get("image_base64"):
+                    return result
+                raise RuntimeError("Gemini did not return an image in the response.")
+            except Exception as exc:  # noqa: BLE001
+                last_exc = exc
+                msg = str(exc).lower()
+                model_issue = (
+                    "model" in msg
+                    or "not found" in msg
+                    or "not available" in msg
+                    or "unsupported" in msg
+                )
+                has_fallback = idx < len(self.models) - 1
+                if model_issue and has_fallback:
+                    continue
+                raise
+
+        if last_exc is not None:
+            raise last_exc
+        raise RuntimeError("Gemini image generation failed without an explicit error.")
 
     def generate_marketing_image(
         self,
@@ -94,7 +138,6 @@ class GeminiImageService:
         component_summary: str = "",
         custom_prompt: Optional[str] = None,
     ) -> dict:
-        """2D SVG screenshot → Gemini → marketing illustration."""
         image = self._decode_image(svg_screenshot_base64)
         prompt_parts = []
         if component_summary:
@@ -108,7 +151,6 @@ class GeminiImageService:
         svg_screenshot_base64: str,
         user_prompt: str,
     ) -> dict:
-        """Sketch how brand-specific parts would look on the 2D frame."""
         image = self._decode_image(svg_screenshot_base64)
         combined = BRAND_PARTS_SYSTEM + f"\nUser request: {user_prompt}"
         return self._generate([combined, image])
@@ -123,7 +165,6 @@ class GeminiImageService:
         parts_context: str,
         ref_type: str = "full_bike",
     ) -> dict:
-        """Replace a specific part in the 2D drawing using a reference image."""
         base_img = self._decode_image(base_image_b64)
         part_img = self._decode_image(part_image_b64)
 
@@ -161,7 +202,6 @@ class GeminiImageService:
         reference_image_b64: str,
         user_prompt: str,
     ) -> dict:
-        """Apply styling/colours from a reference image to the bicycle drawing."""
         bicycle_img = self._decode_image(bicycle_image_b64)
         reference_img = self._decode_image(reference_image_b64)
         return self._generate(

@@ -8,6 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/ibds2d"
     gemini_api_key: str = ""
+    gemini_image_model: str = "gemini-2.5-flash-image"
 
     # JWT — override in production via environment variable
     jwt_secret: str = "IBDS_CHANGE_ME_IN_PROD_32chars!!"

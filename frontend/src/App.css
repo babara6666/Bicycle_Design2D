@@ -471,6 +471,37 @@
   fill: #11314a;
 }
 
+.viewer-toolbar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+}
+
+.viewer-toggle {
+  border: 1px solid #23486433;
+  border-radius: 999px;
+  background: rgba(255, 250, 242, 0.92);
+  color: #16364d;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(8, 28, 45, 0.12);
+  backdrop-filter: blur(6px);
+}
+
+.viewer-toggle:hover {
+  background: rgba(247, 238, 224, 0.96);
+}
+
+.viewer-toggle.active {
+  background: rgba(28, 79, 114, 0.94);
+  border-color: #1c4f72;
+  color: #fffaf0;
+}
+
 .viewer-hint {
   position: absolute;
   left: 14px;

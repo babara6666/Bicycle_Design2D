@@ -12,7 +12,7 @@ import { HeaderBar } from "./components/HeaderBar";
 import { Viewer2D } from "./components/Viewer2D";
 import { REQUIRED_NODES } from "./constants";
 import { useEditorStore } from "./stores/editorStore";
-import type { Category, ComponentDetail } from "./types";
+import type { Category, ComponentDetail, Vehicle } from "./types";
 import { captureSvgToPng } from "./utils/capture";
 import LandingPage from "./pages/LandingPage";
 import DesignPickerPage from "./pages/DesignPickerPage";
@@ -49,6 +49,7 @@ function AuthenticatedApp({ username, role, onLogout }: AuthenticatedAppProps) {
   const [aiSimilarOpen, setAiSimilarOpen] = useState(false);
   const [drawingOpen, setDrawingOpen] = useState(false);
   const [geminiKeyOpen, setGeminiKeyOpen] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(true);
 
   const captureViewer = useCallback(async (): Promise<string | null> => {
     if (!viewerSvgRef.current) return null;
@@ -118,20 +119,11 @@ function AuthenticatedApp({ username, role, onLogout }: AuthenticatedAppProps) {
   } = useEditorStore();
 
   const [searchParams] = useSearchParams();
+  const requestedVehicle = (searchParams.get("vehicle") as Vehicle | null) ?? undefined;
 
   useEffect(() => {
-    void initialize();
-  }, [initialize]);
-
-  // Auto-switch vehicle from URL ?vehicle= after init completes
-  useEffect(() => {
-    const vehicleParam = searchParams.get("vehicle");
-    if (vehicleParam && vehicle !== vehicleParam) {
-      void setVehicle(vehicleParam as import("./types").Vehicle);
-    }
-    // Only run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void initialize(requestedVehicle);
+  }, [initialize, requestedVehicle]);
 
   const selectedComponents = useMemo(() => {
     const details: ComponentDetail[] = [];
@@ -221,6 +213,8 @@ function AuthenticatedApp({ username, role, onLogout }: AuthenticatedAppProps) {
             headTubeAngleDeg={headTubeAngleDeg}
             paPosition={paPosition}
             pbPosition={pbPosition}
+            showSkeleton={showSkeleton}
+            onToggleSkeletonVisibility={() => setShowSkeleton((current) => !current)}
             onSelectCategory={(category: Category) => selectCategory(category)}
             onSetPaPosition={setPaPosition}
             onSetPbPosition={setPbPosition}
