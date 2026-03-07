@@ -1,6 +1,9 @@
-import { useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 
+import { CATEGORY_LABELS } from "../constants";
+import { captureSvgMarkupToPng } from "../utils/capture";
 import { authedFetch } from "../utils/authedFetch";
+import { removeBackground } from "../utils/imageUtils";
 import AIVersionStrip, { type AIVersion } from "./AIVersionStrip";
 
 interface SelectedPart {
@@ -14,44 +17,110 @@ interface AIPartReplaceModalProps {
   onClose: () => void;
   originalImage: string | null;
   selectedParts: Partial<Record<string, SelectedPart>>;
+  selectedPartPreviews: Partial<Record<string, string | null>>;
+  captureTargetMask: (category: string) => Promise<string | null>;
+  defaultCategory?: string;
   designName: string;
+  onApplyToCanvas?: (category: string, imageDataUrl: string) => void;
 }
-
-const CATEGORY_LABELS: Record<string, { zh: string; en: string }> = {
-  head_tube:   { zh: "頭管", en: "Head Tube" },
-  top_tube:    { zh: "上管", en: "Top Tube" },
-  down_tube:   { zh: "下管", en: "Down Tube" },
-  seat_tube:   { zh: "中管", en: "Seat Tube" },
-  motor_mount: { zh: "馬達座", en: "Motor Mount" },
-  seat_stay:   { zh: "上叉", en: "Seat Stay" },
-  chain_stay:  { zh: "下叉", en: "Chain Stay" },
-  fork_end:    { zh: "叉片", en: "Fork End" },
-};
 
 export default function AIPartReplaceModal({
   isOpen,
   onClose,
   originalImage,
   selectedParts,
+  selectedPartPreviews,
+  captureTargetMask,
+  defaultCategory,
   designName,
+  onApplyToCanvas,
 }: AIPartReplaceModalProps) {
-  const [targetCategory, setTargetCategory] = useState("head_tube");
+  const availableCategories = useMemo(
+    () => Object.keys(CATEGORY_LABELS).filter((key) => selectedParts[key] != null),
+    [selectedParts],
+  );
+
+  const [targetCategory, setTargetCategory] = useState(defaultCategory ?? "head_tube");
   const [partImage, setPartImage] = useState<string | null>(null);
   const [partImageName, setPartImageName] = useState("");
-  const [refType, setRefType] = useState<"full_bike" | "single_part">("single_part");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [versions, setVersions] = useState<AIVersion[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [currentPartImage, setCurrentPartImage] = useState<string | null>(null);
+  const [targetMaskImage, setTargetMaskImage] = useState<string | null>(null);
+  const [bgRemovedIds, setBgRemovedIds] = useState<Set<number>>(new Set());
+  const [removingBg, setRemovingBg] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedVersion = versions.find((v) => v.id === selectedId) ?? null;
-  const availableCategories = Object.keys(CATEGORY_LABELS).filter(
-    (k) => selectedParts[k] != null,
-  );
+  const selectedVersion = versions.find((version) => version.id === selectedId) ?? null;
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const getPartLabel = (category: string) => {
+    const english = CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS] ?? category;
+    const configuredName = selectedParts[category]?.name?.trim();
+    return {
+      zh: configuredName || english,
+      en: english,
+      display: configuredName && configuredName !== english ? `${configuredName} (${english})` : english,
+    };
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const preferred =
+      defaultCategory && selectedParts[defaultCategory]
+        ? defaultCategory
+        : availableCategories[0];
+    if (preferred) {
+      setTargetCategory(preferred);
+    }
+  }, [availableCategories, defaultCategory, isOpen, selectedParts]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function buildCurrentPartImage() {
+      const svg = selectedPartPreviews[targetCategory] ?? null;
+      if (!svg) {
+        setCurrentPartImage(null);
+        return;
+      }
+      try {
+        const png = await captureSvgMarkupToPng(svg, "#ffffff", 768);
+        if (!cancelled) {
+          setCurrentPartImage(png);
+        }
+      } catch {
+        if (!cancelled) {
+          setCurrentPartImage(null);
+        }
+      }
+    }
+
+    void buildCurrentPartImage();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPartPreviews, targetCategory]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function buildTargetMask() {
+      const mask = await captureTargetMask(targetCategory);
+      if (!cancelled) {
+        setTargetMaskImage(mask);
+      }
+    }
+
+    void buildTargetMask();
+    return () => {
+      cancelled = true;
+    };
+  }, [captureTargetMask, targetCategory]);
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
     setPartImageName(file.name);
     const reader = new FileReader();
@@ -61,143 +130,141 @@ export default function AIPartReplaceModal({
 
   const handleGenerate = async () => {
     if (!originalImage || !partImage) return;
+
     setLoading(true);
     setError(null);
 
-    const label = CATEGORY_LABELS[targetCategory] ?? { zh: targetCategory, en: targetCategory };
+    const label = getPartLabel(targetCategory);
+    const targetPart = selectedParts[targetCategory];
+    // currentPartImage and targetMaskImage are optional hints for Gemini;
+    // the backend can work without them.
     const partsList = Object.entries(selectedParts)
-      .filter(([, p]) => p != null)
-      .map(([key, p]) => `  - ${CATEGORY_LABELS[key]?.en || key}: ${p!.name}`)
+      .filter(([, part]) => part != null)
+      .map(([key, part]) => `- ${CATEGORY_LABELS[key as keyof typeof CATEGORY_LABELS] || key}: ${part!.name}`)
       .join("\n");
 
     try {
-      const res = await authedFetch("/api/ai/replace-part", {
+      const response = await authedFetch("/api/ai/replace-part", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           base_image: originalImage,
+          current_part_image: currentPartImage,
           part_image: partImage,
+          target_mask_image: targetMaskImage,
           part_name_zh: label.zh,
           part_name_en: label.en,
           design_name: designName,
           parts_context: partsList,
-          ref_type: refType,
         }),
       });
-      const data: { image_base64?: string; text?: string; error?: string } = await res.json();
+
+      const data: { image_base64?: string; text?: string; error?: string } = await response.json();
       if (data.error) {
         setError(data.error);
       } else if (data.image_base64) {
-        const v: AIVersion = {
+        const version: AIVersion = {
           id: versions.length + 1,
           image: `data:image/png;base64,${data.image_base64}`,
-          prompt: `Replace ${label.en}`,
+          prompt: `Replace ${label.en}${targetPart ? ` (${targetPart.name})` : ""}`,
           text: data.text,
           timestamp: new Date(),
         };
-        setVersions((prev) => [...prev, v]);
-        setSelectedId(v.id);
+        setVersions((prev) => [...prev, version]);
+        setSelectedId(version.id);
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed");
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : "Failed to replace part");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteVersion = (id: number) => {
-    setVersions((prev) => prev.filter((v) => v.id !== id));
+    setVersions((prev) => prev.filter((version) => version.id !== id));
     if (selectedId === id) {
-      const rem = versions.filter((v) => v.id !== id);
-      setSelectedId(rem.length > 0 ? rem[rem.length - 1].id : null);
+      const remaining = versions.filter((version) => version.id !== id);
+      setSelectedId(remaining.length > 0 ? remaining[remaining.length - 1].id : null);
     }
   };
 
   const handleDownload = () => {
     if (!selectedVersion) return;
-    const a = document.createElement("a");
-    a.href = selectedVersion.image;
-    a.download = `bicycle2d_replace_v${selectedVersion.id}_${Date.now()}.png`;
-    a.click();
+    const anchor = document.createElement("a");
+    anchor.href = selectedVersion.image;
+    anchor.download = `bicycle2d_replace_v${selectedVersion.id}_${Date.now()}.png`;
+    anchor.click();
+  };
+
+  const handleRemoveBg = async () => {
+    if (!selectedVersion || bgRemovedIds.has(selectedVersion.id)) return;
+    setRemovingBg(true);
+    try {
+      const processed = await removeBackground(selectedVersion.image);
+      setVersions((prev) =>
+        prev.map((v) => v.id === selectedVersion.id ? { ...v, image: processed } : v)
+      );
+      setBgRemovedIds((prev) => new Set(prev).add(selectedVersion.id));
+    } catch {
+      // silently ignore
+    } finally {
+      setRemovingBg(false);
+    }
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="ai-overlay">
-      <div className="ai-modal">
-        {/* Header */}
+      <div className="ai-modal ai-modal-lg">
         <div className="ai-modal-header">
           <div className="ai-modal-header-title">
-            <div className="ai-modal-icon green">⇄</div>
+            <div className="ai-modal-icon green">AI</div>
             <div>
-              <h2 className="ai-modal-title">AI 零件替換</h2>
-              <p className="ai-modal-subtitle">上傳新零件圖片，AI 自動替換到 2D 圖面</p>
+              <h2 className="ai-modal-title">AI Replace Part</h2>
+              <p className="ai-modal-subtitle">
+                Use current part + reference part + target mask for stable replacement.
+              </p>
             </div>
           </div>
           <button className="ai-modal-close" onClick={onClose} type="button">
-            ✕
+            x
           </button>
         </div>
 
-        {/* Body */}
         <div className="ai-modal-body">
-          {/* Controls */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16, alignItems: "flex-end" }}>
-            {/* Part selector */}
-            <div style={{ flex: 1, minWidth: 160 }}>
+            <div style={{ flex: 1, minWidth: 180 }}>
               <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, textTransform: "uppercase" }}>
-                要替換的零件
+                Target Part
               </label>
               <select
                 value={targetCategory}
-                onChange={(e) => setTargetCategory(e.target.value)}
+                onChange={(event) => setTargetCategory(event.target.value)}
                 style={{ width: "100%", border: "1px solid #c9bcab", borderRadius: 10, background: "var(--bg-surface-alt)", color: "var(--text-strong)", padding: "8px 10px", fontFamily: "inherit" }}
               >
-                {availableCategories.map((k) => (
-                  <option key={k} value={k}>
-                    {CATEGORY_LABELS[k]?.zh} ({CATEGORY_LABELS[k]?.en})
-                    {selectedParts[k] ? ` — ${selectedParts[k]!.name}` : ""}
-                  </option>
-                ))}
+                {availableCategories.map((category) => {
+                  const label = getPartLabel(category);
+                  return (
+                    <option key={category} value={category}>
+                      {label.display}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
-            {/* Part image upload */}
-            <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
               <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, textTransform: "uppercase" }}>
-                參考圖片
+                Reference Image
               </label>
               <div
                 onClick={() => fileInputRef.current?.click()}
                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", border: `2px dashed ${partImage ? "var(--ok)" : "#c9bcab"}`, borderRadius: 10, cursor: "pointer", background: partImage ? "#f0faf6" : "var(--bg-surface-alt)", color: partImage ? "var(--ok)" : "var(--text-muted)", fontSize: 13 }}
               >
-                ↑ {partImageName || "點擊上傳圖片"}
+                {partImageName || "Upload a reference part image"}
               </div>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} style={{ display: "none" }} />
-            </div>
-
-            {/* Ref type */}
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, textTransform: "uppercase" }}>
-                圖片類型
-              </label>
-              <div style={{ display: "flex", border: "1px solid #c9bcab", borderRadius: 10, overflow: "hidden", fontSize: 13 }}>
-                <button
-                  onClick={() => setRefType("single_part")}
-                  style={{ flex: 1, padding: "8px 12px", background: refType === "single_part" ? "var(--ok)" : "var(--bg-surface-alt)", color: refType === "single_part" ? "#fff" : "var(--text-muted)", border: "none", cursor: "pointer", fontWeight: 600 }}
-                  type="button"
-                >
-                  單一零件
-                </button>
-                <button
-                  onClick={() => setRefType("full_bike")}
-                  style={{ flex: 1, padding: "8px 12px", background: refType === "full_bike" ? "var(--ok)" : "var(--bg-surface-alt)", color: refType === "full_bike" ? "#fff" : "var(--text-muted)", border: "none", cursor: "pointer", fontWeight: 600 }}
-                  type="button"
-                >
-                  整車圖
-                </button>
-              </div>
+              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageUpload} />
             </div>
 
             <button
@@ -206,73 +273,103 @@ export default function AIPartReplaceModal({
               disabled={loading || !originalImage || !partImage}
               type="button"
             >
-              {loading ? "生成中..." : versions.length > 0 ? "再次生成" : "開始生成"}
+              {loading ? "Generating..." : versions.length > 0 ? "Generate Again" : "Generate"}
             </button>
           </div>
 
-          {/* Part preview */}
-          {partImage && (
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
-              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>零件參考圖：</span>
-              <img src={partImage} alt="part" style={{ height: 64, width: "auto", borderRadius: 8, border: "1px solid #d6cbb8", objectFit: "contain", background: "#f4efe5" }} />
-            </div>
-          )}
-
-          {/* Images */}
-          <div className="ai-img-grid">
+          <div className="ai-img-grid" style={{ marginBottom: 16 }}>
             <div>
-              <p className="ai-img-label">原始 2D 圖</p>
+              <p className="ai-img-label">Full Bike Context</p>
               <div className="ai-img-box">
-                {originalImage ? (
-                  <img src={originalImage} alt="Original" />
-                ) : (
-                  <span className="ai-img-placeholder">無截圖</span>
-                )}
+                {originalImage ? <img src={originalImage} alt="Full bike context" /> : <span className="ai-img-placeholder">No full bike image</span>}
               </div>
             </div>
             <div>
-              <p className="ai-img-label">
-                AI 替換結果{selectedVersion && <span style={{ color: "var(--ok)", marginLeft: 6 }}>v{selectedVersion.id}</span>}
-              </p>
+              <p className="ai-img-label">Current Target Part</p>
+              <div className="ai-img-box">
+                {currentPartImage ? <img src={currentPartImage} alt="Current target part" /> : <span className="ai-img-placeholder">Current part preview unavailable</span>}
+              </div>
+            </div>
+            <div>
+              <p className="ai-img-label">Reference Input</p>
+              <div className="ai-img-box">
+                {partImage ? <img src={partImage} alt="Reference input" /> : <span className="ai-img-placeholder">Upload a reference image</span>}
+              </div>
+            </div>
+            <div>
+              <p className="ai-img-label">Target Mask</p>
+              <div className="ai-img-box">
+                {targetMaskImage ? <img src={targetMaskImage} alt="Target mask" /> : <span className="ai-img-placeholder">Target mask unavailable</span>}
+              </div>
+            </div>
+          </div>
+
+          <div className="ai-img-grid">
+            <div>
+              <p className="ai-img-label">Generated Result{selectedVersion ? ` v${selectedVersion.id}` : ""}</p>
               <div className="ai-img-box">
                 {loading ? (
                   <div className="ai-spinner-box">
                     <div className="ai-spinner" style={{ borderTopColor: "var(--ok)" }} />
-                    <span className="ai-spinner-label">AI 正在替換零件...</span>
+                    <span className="ai-spinner-label">Generating targeted replacement...</span>
                   </div>
                 ) : selectedVersion ? (
-                  <img src={selectedVersion.image} alt={`AI v${selectedVersion.id}`} />
+                  <img src={selectedVersion.image} alt={`AI version ${selectedVersion.id}`} />
                 ) : error ? (
                   <div className="ai-error-box">{error}</div>
                 ) : (
-                  <span className="ai-img-placeholder">選擇零件 + 上傳參考圖片後點擊「開始生成」</span>
+                  <span className="ai-img-placeholder">Generate a replacement preview.</span>
                 )}
               </div>
             </div>
           </div>
 
-          {selectedVersion?.text && (
-            <div className="ai-text-response">{selectedVersion.text}</div>
-          )}
+          {selectedVersion?.text ? <div className="ai-text-response">{selectedVersion.text}</div> : null}
 
           <AIVersionStrip
             versions={versions}
             selectedId={selectedId}
             onSelect={setSelectedId}
             onDelete={handleDeleteVersion}
-            onClearAll={() => { setVersions([]); setSelectedId(null); }}
+            onClearAll={() => {
+              setVersions([]);
+              setSelectedId(null);
+            }}
           />
         </div>
 
-        {/* Footer */}
         <div className="ai-modal-footer">
-          {selectedVersion && (
-            <button className="ai-btn ai-btn-green" onClick={handleDownload} type="button">
-              ↓ 下載圖片
+          {selectedVersion ? (
+            <button
+              className="ai-btn"
+              onClick={() => void handleRemoveBg()}
+              disabled={removingBg || bgRemovedIds.has(selectedVersion.id)}
+              type="button"
+              style={{ background: bgRemovedIds.has(selectedVersion.id) ? "#ccc" : undefined }}
+            >
+              {removingBg ? "Removing BG…" : bgRemovedIds.has(selectedVersion.id) ? "BG Removed ✓" : "Remove BG"}
             </button>
-          )}
+          ) : null}
+          {selectedVersion && onApplyToCanvas ? (
+            <button
+              className="ai-btn ai-btn-primary"
+              onClick={() => {
+                onApplyToCanvas(targetCategory, selectedVersion.image);
+                onClose();
+              }}
+              type="button"
+            >
+              Apply to Canvas
+            </button>
+          ) : null}
+          {selectedVersion ? (
+            <button className="ai-btn ai-btn-green" onClick={handleDownload} type="button">
+              Download
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
   );
 }
+

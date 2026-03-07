@@ -1,4 +1,5 @@
-import { useState } from "react";
+﻿import { useEffect, useState } from "react";
+
 import { useGeminiKeyStore } from "../stores/geminiKeyStore";
 
 interface GeminiKeyModalProps {
@@ -12,63 +13,64 @@ export default function GeminiKeyModal({ isOpen, onClose }: GeminiKeyModalProps)
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      setDraft(apiKey);
+      setSaved(false);
+    }
+  }, [apiKey, isOpen]);
+
   if (!isOpen) return null;
 
   const handleSave = () => {
     setApiKey(draft);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    window.setTimeout(() => setSaved(false), 2000);
   };
 
   const handleClear = () => {
     clearApiKey();
     setDraft("");
+    setSaved(false);
   };
 
   const maskedDisplay = apiKey
-    ? apiKey.slice(0, 8) + "••••••••" + apiKey.slice(-4)
+    ? `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`
     : null;
 
   return (
     <div className="ai-overlay" onClick={onClose}>
-      <div
-        className="ai-modal gemini-key-modal"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
+      <div className="ai-modal gemini-key-modal" onClick={(event) => event.stopPropagation()}>
         <div className="ai-modal-header">
           <div className="ai-modal-header-title">
-            <div className="ai-modal-icon amber">🔑</div>
+            <div className="ai-modal-icon amber">AI</div>
             <div>
               <h2 className="ai-modal-title">Gemini API Key</h2>
               <p className="ai-modal-subtitle">
-                輸入您自己的 Google Gemini API Key 以啟用 AI 功能
+                Images are generated with the user&apos;s own Gemini API key.
               </p>
             </div>
           </div>
           <button className="ai-modal-close" onClick={onClose} type="button">
-            ✕
+            x
           </button>
         </div>
 
-        {/* Body */}
         <div className="ai-modal-body">
-          {/* Status badge */}
           <div className={`gemini-key-status ${apiKey ? "set" : "unset"}`}>
             {apiKey ? (
               <>
                 <span className="gemini-key-status-dot set" />
-                <span>已設定：{maskedDisplay}</span>
+                <span>Current key: {maskedDisplay}</span>
               </>
             ) : (
               <>
                 <span className="gemini-key-status-dot unset" />
-                <span>尚未設定 API Key — AI 功能將停用</span>
+                <span>No Gemini API key saved for this browser.</span>
               </>
             )}
           </div>
 
-          {/* Input */}
           <div className="gemini-key-input-row">
             <label className="gemini-key-label">API Key</label>
             <div className="gemini-key-input-wrap">
@@ -76,7 +78,10 @@ export default function GeminiKeyModal({ isOpen, onClose }: GeminiKeyModalProps)
                 className="gemini-key-input"
                 type={showKey ? "text" : "password"}
                 value={draft}
-                onChange={(e) => { setDraft(e.target.value); setSaved(false); }}
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                  setSaved(false);
+                }}
                 placeholder="AIza..."
                 autoComplete="off"
                 spellCheck={false}
@@ -84,40 +89,34 @@ export default function GeminiKeyModal({ isOpen, onClose }: GeminiKeyModalProps)
               <button
                 className="gemini-key-eye"
                 type="button"
-                onClick={() => setShowKey((v) => !v)}
-                title={showKey ? "隱藏" : "顯示"}
+                onClick={() => setShowKey((value) => !value)}
+                title={showKey ? "Hide key" : "Show key"}
               >
-                {showKey ? "🙈" : "👁"}
+                {showKey ? "Hide" : "Show"}
               </button>
             </div>
           </div>
 
-          {/* Help text */}
           <p className="gemini-key-help">
-            請前往{" "}
-            <strong>Google AI Studio</strong>（aistudio.google.com）申請免費 API Key。
-            Key 僅儲存在您的瀏覽器本機，不會上傳至伺服器。
+            Get a key from <strong>Google AI Studio</strong>, then paste it here. The key is stored in this
+            browser&apos;s local storage and sent as the <code>X-Gemini-Key</code> header for AI image requests.
+            The backend will no longer use the server default key.
           </p>
         </div>
 
-        {/* Footer */}
         <div className="ai-modal-footer">
-          {apiKey && (
-            <button
-              className="ai-btn ai-btn-ghost"
-              type="button"
-              onClick={handleClear}
-            >
-              清除 Key
+          {apiKey ? (
+            <button className="ai-btn ai-btn-ghost" type="button" onClick={handleClear}>
+              Clear Key
             </button>
-          )}
+          ) : null}
           <button
             className={`ai-btn ${saved ? "ai-btn-green" : "ai-btn-primary"}`}
             type="button"
             onClick={handleSave}
             disabled={draft.trim() === apiKey}
           >
-            {saved ? "✓ 已儲存" : "儲存"}
+            {saved ? "Saved" : "Save Key"}
           </button>
         </div>
       </div>

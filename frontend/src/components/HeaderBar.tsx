@@ -22,6 +22,8 @@ interface HeaderBarProps {
   onOpenAIImage: () => void;
   onOpenAIBrandParts: () => void;
   onOpenAIReplacePart: () => void;
+  onOpenAIIntegrate: () => void;
+  hasAiOverlays: boolean;
   onOpenAISimilar: () => void;
   onOpenDrawing: () => void;
   onOpenGeminiKey: () => void;
@@ -42,6 +44,8 @@ export function HeaderBar({
   onLoadConfiguration,
   // onOpenAIImage, onOpenAIBrandParts, onOpenAISimilar — hidden, not used
   onOpenAIReplacePart,
+  onOpenAIIntegrate,
+  hasAiOverlays,
   onOpenDrawing,
   onOpenGeminiKey,
   onLogout,
@@ -127,6 +131,15 @@ export function HeaderBar({
             disabled={!geminiKeySet}
           >
             ⇄ {lang === "zh" ? "換零件" : "Replace"}
+          </button>
+          <button
+            className="ai-tool-btn green"
+            onClick={onOpenAIIntegrate}
+            type="button"
+            title={lang === "zh" ? "將置放的零件融合進圖面" : "Integrate placed part into drawing"}
+            disabled={!geminiKeySet || !hasAiOverlays}
+          >
+            ⊕ {lang === "zh" ? "融合零件" : "Integrate"}
           </button>
           <button className="ai-tool-btn red" onClick={onOpenDrawing} type="button" title="出圖">
             ⬇ {lang === "zh" ? "出圖" : "Export"}

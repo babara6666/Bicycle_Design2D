@@ -289,7 +289,7 @@ def confirm_pa_pb(
        else falls back to (0, 0)).
     4. Determine the HT_Attach local position (from component.attach_primary,
        else (0, 0)).
-    5. Convert PA/PB world → local using inverse rotation.
+    5. Convert PA/PB world ??local using inverse rotation.
     6. Write updated INSERT blocks to the DXF (one-time backup preserved).
     7. Re-generate SVG preview from the updated DXF.
     8. Persist pa_default, pb_default, preview_svg to DB.
@@ -319,7 +319,7 @@ def confirm_pa_pb(
             detail=f"DXF file not found: {dxf_path}",
         )
 
-    # HT_Attach world position — from skeleton or (0, 0)
+    # HT_Attach world position ??from skeleton or (0, 0)
     ht_world = (0.0, 0.0)
     if payload.skeleton_id is not None:
         skeleton = db.get(Skeleton, payload.skeleton_id)
@@ -328,11 +328,11 @@ def confirm_pa_pb(
         ht_node = skeleton.nodes.get("HT_Attach", {})
         ht_world = (float(ht_node.get("x", 0.0)), float(ht_node.get("y", 0.0)))
 
-    # HT_Attach local position — from component.attach_primary or (0, 0)
+    # HT_Attach local position ??from component.attach_primary or (0, 0)
     ap = component.attach_primary or {}
     ht_local = (float(ap.get("x", 0.0)), float(ap.get("y", 0.0)))
 
-    # Convert world → local
+    # Convert world ??local
     pa_local, pb_local = compute_local_pa_pb(
         pa_world=(payload.pa.x, payload.pa.y),
         pb_world=(payload.pb.x, payload.pb.y),
@@ -366,7 +366,7 @@ def confirm_pa_pb(
     return component
 
 
-# ── AI Image Endpoints (Gemini Nano Banana 2) ──────────────────────────────────
+# ?? AI Image Endpoints (Gemini Nano Banana 2) ??????????????????????????????????
 
 
 class AIImageResponse(PydanticBase):
@@ -388,12 +388,13 @@ class AIBrandPartsRequest(PydanticBase):
 
 class AIReplacePartRequest(PydanticBase):
     base_image: str
+    current_part_image: str | None = None
     part_image: str
+    target_mask_image: str | None = None
     part_name_zh: str
     part_name_en: str
     design_name: str
     parts_context: str
-    ref_type: str = "full_bike"
 
 
 class AISimilarRequest(PydanticBase):
@@ -402,36 +403,34 @@ class AISimilarRequest(PydanticBase):
     user_prompt: str
 
 
+class AIIntegrateRequest(PydanticBase):
+    combined_canvas: str  # full canvas WITH all overlays visible
+    part_names_en: str  # e.g. "Down Tube, Top Tube"
+    part_names_zh: str
+
+
 def _get_gemini(http_request: Request):
-    """
-    Lazy-load GeminiImageService.
-
-    Key resolution order:
-      1. X-Gemini-Key request header (user-provided at exhibition / demo)
-      2. GEMINI_API_KEY in backend/.env (server-side default)
-
-    Raises HTTP 400 if no key is available from either source.
-    """
+    """Resolve the per-user Gemini API key from the request header."""
     from .services.gemini_service import GeminiImageService
 
-    api_key = (
-        http_request.headers.get("X-Gemini-Key", "").strip() or settings.gemini_api_key
-    )
+    import re as _re
+
+    raw_key = http_request.headers.get("X-Gemini-Key", "")
+    # Strip any character outside printable ASCII (e.g. \xa0 non-breaking
+    # space copied from a browser/PDF) that would cause codec errors.
+    api_key = _re.sub(r"[^\x21-\x7e]", "", raw_key).strip()
     if not api_key:
         raise HTTPException(
             status_code=400,
             detail=(
-                "Gemini API Key 未設定。"
-                "請點擊工具列的 🔑 按鈕輸入您的 Google Gemini API Key。"
+                "Gemini API Key is required. Open the Gemini Key dialog and paste your own Google Gemini API key before generating images.",
             ),
         )
     return GeminiImageService(api_key, settings.gemini_image_model)
 
 
 @app.post("/api/ai/refine", response_model=AIImageResponse)
-async def ai_refine(
-    request: AIRefineRequest, http_request: Request, _user: AuthDep
-) -> AIImageResponse:
+async def ai_refine(request: AIRefineRequest, http_request: Request) -> AIImageResponse:
     """Generate a marketing illustration from a 2D SVG screenshot."""
     svc = _get_gemini(http_request)
     try:
@@ -449,7 +448,7 @@ async def ai_refine(
 
 @app.post("/api/ai/brand-parts", response_model=AIImageResponse)
 async def ai_brand_parts(
-    request: AIBrandPartsRequest, http_request: Request, _user: AuthDep
+    request: AIBrandPartsRequest, http_request: Request
 ) -> AIImageResponse:
     """Sketch how brand-specific parts would look on the 2D frame."""
     svc = _get_gemini(http_request)
@@ -466,7 +465,7 @@ async def ai_brand_parts(
 
 @app.post("/api/ai/replace-part", response_model=AIImageResponse)
 async def ai_replace_part(
-    request: AIReplacePartRequest, http_request: Request, _user: AuthDep
+    request: AIReplacePartRequest, http_request: Request
 ) -> AIImageResponse:
     """Replace a specific part in the 2D drawing using a reference image."""
     svc = _get_gemini(http_request)
@@ -475,11 +474,12 @@ async def ai_replace_part(
             svc.replace_part,
             request.base_image,
             request.part_image,
+            request.current_part_image,
+            request.target_mask_image,
             request.part_name_zh,
             request.part_name_en,
             request.design_name,
             request.parts_context,
-            request.ref_type,
         )
         return AIImageResponse(**result)
     except Exception as exc:
@@ -488,7 +488,7 @@ async def ai_replace_part(
 
 @app.post("/api/ai/similar", response_model=AIImageResponse)
 async def ai_similar(
-    request: AISimilarRequest, http_request: Request, _user: AuthDep
+    request: AISimilarRequest, http_request: Request
 ) -> AIImageResponse:
     """Apply styling/colours from a reference image to the bicycle drawing."""
     svc = _get_gemini(http_request)
@@ -498,6 +498,24 @@ async def ai_similar(
             request.bicycle_image,
             request.reference_image,
             request.user_prompt,
+        )
+        return AIImageResponse(**result)
+    except Exception as exc:
+        return AIImageResponse(error=str(exc))
+
+
+@app.post("/api/ai/integrate-part", response_model=AIImageResponse)
+async def ai_integrate_part(
+    request: AIIntegrateRequest, http_request: Request
+) -> AIImageResponse:
+    """Blend a placed AI part overlay seamlessly into the bicycle drawing."""
+    svc = _get_gemini(http_request)
+    try:
+        result = await asyncio.to_thread(
+            svc.integrate_part,
+            request.combined_canvas,
+            request.part_names_en,
+            request.part_names_zh,
         )
         return AIImageResponse(**result)
     except Exception as exc:
@@ -566,7 +584,7 @@ def _run_export_job(job_id: int) -> None:
             job_nn.current_step = step
             db.commit()
 
-        _update("processing", 5, "載入設定")
+        _update("processing", 5, "頛閮剖?")
 
         config: Configuration | None = db.get(Configuration, job_nn.configuration_id)
         if config is None:
@@ -598,7 +616,7 @@ def _run_export_job(job_id: int) -> None:
                 }
             )
 
-        _update("processing", 20, "組合 DXF")
+        _update("processing", 20, "蝯? DXF")
 
         job_name = f"job_{job_id}_{uuid.uuid4().hex[:6]}"
         dxf_out = str(OUTPUT_DXF_DIR / f"{job_name}.dxf")
@@ -612,36 +630,36 @@ def _run_export_job(job_id: int) -> None:
             db.commit()
             return
 
-        _update("processing", 60, "轉換 DWG")
+        _update("processing", 60, "頧? DWG")
 
         try:
             dwg_out = convert_dxf_to_dwg(dxf_out, str(OUTPUT_DWG_DIR))
             job_nn.dwg_path = dwg_out
             db.commit()
         except FileNotFoundError as exc:
-            # ODA not installed — DWG step skipped, not fatal
-            job_nn.current_step = f"DWG 跳過 (ODA未安裝): {exc}"
+            # ODA not installed ??DWG step skipped, not fatal
+            job_nn.current_step = f"DWG 頝喲? (ODA?芸?鋆?: {exc}"
             db.commit()
         except Exception as exc:  # noqa: BLE001
-            job_nn.current_step = f"DWG 失敗: {exc}"
+            job_nn.current_step = f"DWG 憭望?: {exc}"
             db.commit()
 
-        _update("processing", 80, "輸出 PDF")
+        _update("processing", 80, "頛詨 PDF")
 
         try:
             pdf_out = generate_pdf_from_dxf(dxf_out, str(OUTPUT_PDF_DIR))
             job_nn.pdf_path = pdf_out
             db.commit()
         except FileNotFoundError as exc:
-            job_nn.current_step = f"PDF 跳過 (LibreOffice未安裝): {exc}"
+            job_nn.current_step = f"PDF 頝喲? (LibreOffice?芸?鋆?: {exc}"
             db.commit()
         except Exception as exc:  # noqa: BLE001
-            job_nn.current_step = f"PDF 失敗: {exc}"
+            job_nn.current_step = f"PDF 憭望?: {exc}"
             db.commit()
 
         job_nn.status = "completed"
         job_nn.progress = 100
-        job_nn.current_step = "完成"
+        job_nn.current_step = "摰?"
         db.commit()
 
     except Exception as exc:  # noqa: BLE001
@@ -673,7 +691,7 @@ def start_export(
         configuration_id=request.configuration_id,
         status="pending",
         progress=0,
-        current_step="排隊中",
+        current_step="Queued",
     )
     db.add(job)
     db.commit()

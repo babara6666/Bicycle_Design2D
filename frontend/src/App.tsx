@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route, useSearchParams } from "react-router-dom";
 import AIBrandPartsModal from "./components/AIBrandPartsModal";
 import AIImageModal from "./components/AIImageModal";
+import AIIntegrateModal from "./components/AIIntegrateModal";
 import AIPartReplaceModal from "./components/AIPartReplaceModal";
 import AISimilarImageModal from "./components/AISimilarImageModal";
 import DrawingProgressModal from "./components/DrawingProgressModal";
@@ -9,11 +10,11 @@ import GeminiKeyModal from "./components/GeminiKeyModal";
 import { ComponentPanel } from "./components/ComponentPanel";
 import { GeometryPanel } from "./components/GeometryPanel";
 import { HeaderBar } from "./components/HeaderBar";
-import { Viewer2D } from "./components/Viewer2D";
-import { REQUIRED_NODES } from "./constants";
+import { Viewer2D, type Viewer2DHandle, type AiOverlay } from "./components/Viewer2D";
+import { CATEGORY_LABELS, REQUIRED_NODES } from "./constants";
 import { useEditorStore } from "./stores/editorStore";
 import type { Category, ComponentDetail, Vehicle } from "./types";
-import { captureSvgToPng } from "./utils/capture";
+import { captureSvgCategoryMaskToPng, captureSvgToPng } from "./utils/capture";
 import LandingPage from "./pages/LandingPage";
 import DesignPickerPage from "./pages/DesignPickerPage";
 import "./App.css";
@@ -25,7 +26,6 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/designs/:typeCode" element={<DesignPickerPage />} />
         <Route path="/editor" element={<AuthenticatedApp username="dev" role="admin" onLogout={() => {}} />} />
-        {/* legacy: if someone lands on root without routing, show editor directly */}
         <Route path="*" element={<AuthenticatedApp username="dev" role="admin" onLogout={() => {}} />} />
       </Routes>
     </BrowserRouter>
@@ -39,8 +39,7 @@ interface AuthenticatedAppProps {
 }
 
 function AuthenticatedApp({ username, role, onLogout }: AuthenticatedAppProps) {
-  // AI modal state
-  const viewerSvgRef = useRef<SVGSVGElement>(null);
+  const viewerRef = useRef<Viewer2DHandle | null>(null);
   const [aiCapture, setAiCapture] = useState<string | null>(null);
   const [aiLastMarketingResult, setAiLastMarketingResult] = useState<string | null>(null);
   const [aiImageOpen, setAiImageOpen] = useState(false);
@@ -50,16 +49,142 @@ function AuthenticatedApp({ username, role, onLogout }: AuthenticatedAppProps) {
   const [drawingOpen, setDrawingOpen] = useState(false);
   const [geminiKeyOpen, setGeminiKeyOpen] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(true);
+  const [hiddenCategories, setHiddenCategories] = useState<Set<Category>>(new Set());
+  const [aiOverlays, setAiOverlays] = useState<Partial<Record<Category, AiOverlay>>>({});
+  const [selectedAiCategory, setSelectedAiCategory] = useState<Category | null>(null);
+  const [aiIntegrateOpen, setAiIntegrateOpen] = useState(false);
+  const [aiIntegrateCanvas, setAiIntegrateCanvas] = useState<string | null>(null);
+  const [aiIntegratePartNames, setAiIntegratePartNames] = useState("");
+
+  const ensureAiViewReady = useCallback(async () => {
+    viewerRef.current?.fitToContent();
+    await new Promise((resolve) => window.setTimeout(resolve, 80));
+  }, []);
 
   const captureViewer = useCallback(async (): Promise<string | null> => {
-    if (!viewerSvgRef.current) return null;
+    const svgElement = viewerRef.current?.getSvgElement();
+    if (!svgElement) return null;
+
+    await ensureAiViewReady();
     try {
-      const png = await captureSvgToPng(viewerSvgRef.current);
+      const png = await captureSvgToPng(svgElement, "#f4ece0", { sanitizeForAi: true });
       setAiCapture(png);
       return png;
     } catch {
       return null;
     }
+  }, [ensureAiViewReady]);
+
+  const captureTargetMask = useCallback(async (category: string): Promise<string | null> => {
+    const svgElement = viewerRef.current?.getSvgElement();
+    if (!svgElement) return null;
+
+    await ensureAiViewReady();
+    try {
+      return await captureSvgCategoryMaskToPng(svgElement, category);
+    } catch {
+      return null;
+    }
+  }, [ensureAiViewReady]);
+
+  const handleApplyAiOverlay = useCallback((category: string, imageDataUrl: string) => {
+    // Read natural image dimensions so the overlay box matches the actual content.
+    // Normalise so the longer side is at most 300 render units.
+    const img = new window.Image();
+    img.onload = () => {
+      const MAX = 300;
+      const w = img.naturalWidth  || MAX;
+      const h = img.naturalHeight || MAX;
+      const ratio = Math.min(MAX / w, MAX / h);
+      const naturalW = Math.round(w * ratio);
+      const naturalH = Math.round(h * ratio);
+      setAiOverlays((prev) => ({
+        ...prev,
+        [category]: {
+          imageDataUrl,
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          scale: 1,
+          flipX: false,
+          naturalW,
+          naturalH,
+        } satisfies AiOverlay,
+      }));
+    };
+    img.onerror = () => {
+      // Fallback if image can't be measured
+      setAiOverlays((prev) => ({
+        ...prev,
+        [category]: {
+          imageDataUrl,
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          scale: 1,
+          flipX: false,
+          naturalW: 300,
+          naturalH: 300,
+        } satisfies AiOverlay,
+      }));
+    };
+    img.src = imageDataUrl;
+  }, []);
+
+  const handleMoveAiOverlay = useCallback((category: Category, position: { x: number; y: number }) => {
+    setAiOverlays((prev) => {
+      const existing = prev[category];
+      if (!existing) return prev;
+      return { ...prev, [category]: { ...existing, position } };
+    });
+  }, []);
+
+  const handleToggleHideCategory = useCallback((category: Category) => {
+    setHiddenCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
+  }, []);
+
+  const handleUpdateAiOverlay = useCallback((
+    category: Category,
+    updates: Partial<Pick<AiOverlay, "rotation" | "scale" | "flipX">>,
+  ) => {
+    setAiOverlays((prev) => {
+      const existing = prev[category];
+      if (!existing) return prev;
+      return { ...prev, [category]: { ...existing, ...updates } };
+    });
+  }, []);
+
+  const openAIIntegrate = useCallback(async () => {
+    const svgElement = viewerRef.current?.getSvgElement();
+    if (!svgElement) return;
+
+    const overlayCategories = Object.keys(aiOverlays) as Category[];
+    if (overlayCategories.length === 0) return;
+
+    await ensureAiViewReady();
+    // Capture combined canvas WITH overlays visible — same pipeline as captureViewer,
+    // omit sanitizeForAi so overlay <image> elements are included in the screenshot
+    const combinedCanvas = await captureSvgToPng(svgElement, "#f4ece0");
+    if (!combinedCanvas) return;
+
+    const partNamesEn = overlayCategories
+      .map((cat) => (CATEGORY_LABELS as Record<string, string>)[cat] ?? cat)
+      .join(", ");
+
+    setAiIntegrateCanvas(combinedCanvas);
+    setAiIntegratePartNames(partNamesEn);
+    setAiIntegrateOpen(true);
+  }, [ensureAiViewReady, aiOverlays]);
+
+  const handleRemoveAiOverlay = useCallback((category: Category) => {
+    setAiOverlays((prev) => {
+      const next = { ...prev };
+      delete next[category];
+      return next;
+    });
   }, []);
 
   const openAIImage = useCallback(async () => {
@@ -77,9 +202,10 @@ function AuthenticatedApp({ username, role, onLogout }: AuthenticatedAppProps) {
     setAiReplaceOpen(true);
   }, [captureViewer]);
 
-  const openAISimilar = useCallback(() => {
+  const openAISimilar = useCallback(async () => {
+    await ensureAiViewReady();
     setAiSimilarOpen(true);
-  }, []);
+  }, [ensureAiViewReady]);
 
   const {
     vehicle,
@@ -160,7 +286,9 @@ function AuthenticatedApp({ username, role, onLogout }: AuthenticatedAppProps) {
         onOpenAIImage={() => void openAIImage()}
         onOpenAIBrandParts={() => void openAIBrandParts()}
         onOpenAIReplacePart={() => void openAIReplacePart()}
-        onOpenAISimilar={openAISimilar}
+        onOpenAIIntegrate={() => void openAIIntegrate()}
+        hasAiOverlays={Object.keys(aiOverlays).length > 0}
+        onOpenAISimilar={() => void openAISimilar()}
         onOpenDrawing={() => setDrawingOpen(true)}
         onOpenGeminiKey={() => setGeminiKeyOpen(true)}
         onLogout={onLogout}
@@ -190,11 +318,13 @@ function AuthenticatedApp({ username, role, onLogout }: AuthenticatedAppProps) {
             selectedComponentIds={selectedComponentIds}
             categoryAngles={categoryAngles}
             categoryPositions={categoryPositions}
+            hiddenCategories={hiddenCategories}
             onSelectCategory={selectCategory}
             onSelectComponent={(category, id) => void selectComponent(category, id)}
             onSetCategoryAngle={setCategoryAngle}
             onNudgeCategory={nudgeCategory}
             onResetCategory={resetCategoryToDefault}
+            onToggleHideCategory={handleToggleHideCategory}
           />
         </aside>
 
@@ -203,7 +333,7 @@ function AuthenticatedApp({ username, role, onLogout }: AuthenticatedAppProps) {
           {isLoading ? <div className="status-banner loading">Loading project data...</div> : null}
 
           <Viewer2D
-            ref={viewerSvgRef}
+            ref={viewerRef}
             skeleton={skeleton}
             components={selectedComponents}
             categoryPositions={categoryPositions}
@@ -214,16 +344,23 @@ function AuthenticatedApp({ username, role, onLogout }: AuthenticatedAppProps) {
             paPosition={paPosition}
             pbPosition={pbPosition}
             showSkeleton={showSkeleton}
+            hiddenCategories={hiddenCategories}
+            aiOverlays={aiOverlays}
+            selectedAiCategory={selectedAiCategory}
             onToggleSkeletonVisibility={() => setShowSkeleton((current) => !current)}
             onSelectCategory={(category: Category) => selectCategory(category)}
+            onSelectAiCategory={setSelectedAiCategory}
+            onClearAiSelection={() => setSelectedAiCategory(null)}
             onSetPaPosition={setPaPosition}
             onSetPbPosition={setPbPosition}
             onMoveCategory={setCategoryPosition}
+            onMoveAiOverlay={handleMoveAiOverlay}
+            onUpdateAiOverlay={handleUpdateAiOverlay}
+            onRemoveAiOverlay={handleRemoveAiOverlay}
           />
         </section>
       </main>
 
-      {/* AI Modals */}
       <AIImageModal
         isOpen={aiImageOpen}
         onClose={() => setAiImageOpen(false)}
@@ -251,7 +388,15 @@ function AuthenticatedApp({ username, role, onLogout }: AuthenticatedAppProps) {
               { id: id!, name: componentDetails[id!].name, category: cat },
             ]),
         )}
+        selectedPartPreviews={Object.fromEntries(
+          Object.entries(selectedComponentIds)
+            .filter(([, id]) => id != null && componentDetails[id])
+            .map(([cat, id]) => [cat, componentDetails[id!].preview_svg ?? null]),
+        )}
+        captureTargetMask={captureTargetMask}
+        defaultCategory={selectedCategory}
         designName={vehicle}
+        onApplyToCanvas={handleApplyAiOverlay}
       />
       <AISimilarImageModal
         isOpen={aiSimilarOpen}
@@ -266,6 +411,14 @@ function AuthenticatedApp({ username, role, onLogout }: AuthenticatedAppProps) {
       <GeminiKeyModal
         isOpen={geminiKeyOpen}
         onClose={() => setGeminiKeyOpen(false)}
+      />
+
+      <AIIntegrateModal
+        isOpen={aiIntegrateOpen}
+        onClose={() => setAiIntegrateOpen(false)}
+        combinedCanvas={aiIntegrateCanvas}
+        partNamesEn={aiIntegratePartNames}
+        partNamesZh={aiIntegratePartNames}
       />
     </div>
   );

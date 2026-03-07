@@ -17,7 +17,13 @@ export async function authedFetch(
     headers.set("Authorization", `Bearer ${token}`);
   }
   if (geminiKey) {
-    headers.set("X-Gemini-Key", geminiKey);
+    // Keep only printable ASCII (0x21–0x7E) to strip invisible characters
+    // such as non-breaking spaces (\xa0), zero-width spaces, smart quotes, etc.
+    // that are commonly introduced when copy-pasting API keys from a browser or PDF.
+    const safeKey = geminiKey.replace(/[^\x21-\x7E]/g, "").trim();
+    if (safeKey) {
+      headers.set("X-Gemini-Key", safeKey);
+    }
   }
   return fetch(input, { ...init, headers });
 }

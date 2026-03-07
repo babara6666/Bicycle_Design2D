@@ -10,11 +10,13 @@ interface ComponentPanelProps {
   selectedComponentIds: Partial<Record<Category, number>>;
   categoryAngles: Partial<Record<Category, number>>;
   categoryPositions: Partial<Record<Category, Point>>;
+  hiddenCategories: Set<Category>;
   onSelectCategory: (category: Category) => void;
   onSelectComponent: (category: Category, componentId: number) => void;
   onSetCategoryAngle: (category: Category, angleDeg: number) => void;
   onNudgeCategory: (category: Category, dx: number, dy: number) => void;
   onResetCategory: (category: Category) => void;
+  onToggleHideCategory: (category: Category) => void;
 }
 
 export function ComponentPanel({
@@ -23,11 +25,13 @@ export function ComponentPanel({
   selectedComponentIds,
   categoryAngles,
   categoryPositions,
+  hiddenCategories,
   onSelectCategory,
   onSelectComponent,
   onSetCategoryAngle,
   onNudgeCategory,
   onResetCategory,
+  onToggleHideCategory,
 }: ComponentPanelProps) {
   const [expandedCategory, setExpandedCategory] = useState<Category | null>(null);
   const [crossVehicleCatalog, setCrossVehicleCatalog] = useState<ComponentListItem[]>([]);
@@ -58,6 +62,7 @@ export function ComponentPanel({
           const selectedId = selectedComponentIds[category] ?? defaultId;
           const isSelectedCategory = selectedCategory === category;
           const isExpanded = expandedCategory === category;
+          const isHidden = hiddenCategories.has(category);
           const angleDeg = categoryAngles[category] ?? 0;
           const pos = categoryPositions[category];
 
@@ -94,11 +99,26 @@ export function ComponentPanel({
                 }}
                 style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
               >
-                <h3>{CATEGORY_LABELS[category]}</h3>
-                <span style={{ fontSize: "0.75rem", opacity: 0.6 }}>
-                  {isCrossVehicle && <span style={{ color: "var(--accent, #6ee7b7)", marginRight: 4 }}>🔄</span>}
-                  {angleDeg !== 0 ? `${angleDeg.toFixed(1)}°` : ""}
-                  {isExpanded ? " ▲" : " ▼"}
+                <h3 style={{ opacity: isHidden ? 0.4 : 1 }}>{CATEGORY_LABELS[category]}</h3>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  {/* Hide/show toggle */}
+                  <button
+                    type="button"
+                    title={isHidden ? "Show part" : "Hide part"}
+                    onClick={(e) => { e.stopPropagation(); onToggleHideCategory(category); }}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      fontSize: "0.9rem", padding: "0 2px", lineHeight: 1,
+                      opacity: isHidden ? 1 : 0.5,
+                    }}
+                  >
+                    {isHidden ? "🙈" : "👁"}
+                  </button>
+                  <span style={{ fontSize: "0.75rem", opacity: 0.6 }}>
+                    {isCrossVehicle && <span style={{ color: "var(--accent, #6ee7b7)", marginRight: 4 }}>🔄</span>}
+                    {angleDeg !== 0 ? `${angleDeg.toFixed(1)}°` : ""}
+                    {isExpanded ? " ▲" : " ▼"}
+                  </span>
                 </span>
               </header>
 

@@ -1,10 +1,4 @@
-/**
- * geminiKeyStore.ts — stores the user-provided Gemini API key in localStorage.
- *
- * The key is sent as `X-Gemini-Key` header on every AI request.
- * The backend will use it in preference to the server-side .env key.
- */
-import { create } from "zustand";
+﻿import { create } from "zustand";
 
 const STORAGE_KEY = "ibds_gemini_key";
 
@@ -14,41 +8,47 @@ interface GeminiKeyState {
   clearApiKey: () => void;
 }
 
-function readPersistedKey(): string {
+function clearPersistedKey(): void {
   try {
-    return localStorage.getItem(STORAGE_KEY) ?? "";
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function loadPersistedKey(): string {
+  try {
+    return localStorage.getItem(STORAGE_KEY)?.trim() ?? "";
   } catch {
     return "";
   }
 }
 
 export const useGeminiKeyStore = create<GeminiKeyState>()((set) => ({
-  apiKey: readPersistedKey(),
+  apiKey: loadPersistedKey(),
 
   setApiKey: (key) => {
+    // Strip non-printable / non-ASCII characters before storing (e.g. \xa0
+    // non-breaking space introduced by copy-pasting from a browser/PDF).
+    const trimmed = key.replace(/[^\x21-\x7E]/g, "").trim();
     try {
-      if (key.trim()) {
-        localStorage.setItem(STORAGE_KEY, key.trim());
+      if (trimmed) {
+        localStorage.setItem(STORAGE_KEY, trimmed);
       } else {
         localStorage.removeItem(STORAGE_KEY);
       }
     } catch {
       // ignore
     }
-    set({ apiKey: key.trim() });
+    set({ apiKey: trimmed });
   },
 
   clearApiKey: () => {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
-    }
+    clearPersistedKey();
     set({ apiKey: "" });
   },
 }));
 
-/** Read the current key without subscribing (for use in fetch helpers). */
 export function getGeminiKey(): string {
   return useGeminiKeyStore.getState().apiKey;
 }
